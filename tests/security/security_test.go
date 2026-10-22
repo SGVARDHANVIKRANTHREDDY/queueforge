@@ -110,11 +110,7 @@ func (g *rig) enqueue(key, ip string) string {
 // ---------------------------------------------------------------- authentication hardening
 
 func TestFailureLimiter(t *testing.T) {
-	now := time.Unix(1000, 0)
-	l := auth.NewFailureLimiter(3, time.Minute)
-	// white-box clock via exported behaviour: use real time but a tiny window instead
-	_ = now
-	l = auth.NewFailureLimiter(3, 200*time.Millisecond)
+	l := auth.NewFailureLimiter(3, 200*time.Millisecond)
 	for i := 0; i < 2; i++ {
 		l.RecordFailure("1.2.3.4")
 	}

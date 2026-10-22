@@ -1474,3 +1474,126 @@ WSL invocation returned successfully but emitted no script result, so it is
 not claimed as a verified `restore drill OK`. The original exact prerequisite
 failure remains: no real production backup or production deployment was
 available.
+
+## Milestone plan execution log
+
+The executable portions of `QueueForge Milestone Plan 63 to 67 to 75.md` were
+run on 2026-10-22. The explicitly deferred code/test items were not
+implemented: the outage assertion fix, real-worker panic test, lease-expiry
+test, cancel-race test, mass-crash script, and disk alert. Items requiring a
+real VPS, domain, external monitor, second machine, outside reviewer, or
+multi-week runtime are recorded as prerequisites rather than represented as
+completed evidence.
+
+### CI and strict network chaos
+
+The first corrected workflow run was
+[run 39833173145](https://github.com/SGVARDHANVIKRANTHREDDY/queueforge/actions/runs/39833173145).
+The `v0.36.0` Trivy action tag resolved, but the run still failed in two
+independent places:
+
+    staticcheck:
+    internal/httpapi/api.go:66:9: middleware.RealIP is deprecated
+    internal/worker/safecall_test.go:15:3: assignment to nil map (SA5000)
+    tests/chaos/pg_outage_test.go:168:3: use t.Fatalf instead of t.Fatal(fmt.Sprintf(...))
+    tests/security/security_test.go:114:2: this value of l is never used (SA4006)
+
+    PostgreSQL Integration & Chaos Tests:
+    repeated database cleanup errors and missing goose_db_version messages
+
+The staticcheck findings were corrected locally with a documented intentional
+panic suppression for the panic fixture and direct `t.Fatalf` formatting. The
+workflow needs one more hosted run after these changes.
+
+The strict network-fault command was run five times alone with
+`QF_CHAOS_STRICT=1`:
+
+    run 1: wasted_executions=16, FAIL
+    run 2: wasted_executions=15, FAIL
+    run 3: wasted_executions=4, PASS
+    run 4: wasted_executions=15, FAIL
+    run 5: wasted_executions=3, PASS
+
+Median wasted executions: 15. Maximum: 16. The strict `<=10` guard is
+therefore flaky under this environment and is not claimed green.
+
+### Clean README quickstart
+
+A fresh clone was created at `qf-clean`. The Compose API port `8080` was
+occupied, so the API was run on `18081`; this deviation is material and was
+recorded. Tenant creation, API-key creation, a worker-backed echo job,
+same-key idempotency replay, batch submission/replay, and the Python SDK
+venv flow all succeeded.
+
+Representative outputs:
+
+    R1 status=queued, id=8221a8fb-67da-40fe-a99d-0a0b5b662805
+    R2 status=succeeded with the same id
+    B1 returned 2 job ids
+    B2 returned the same 2 ids with status=succeeded
+    Python: submit_job, submit_batch=2, poll_until_complete=succeeded
+
+The first literal README attempt exposed two documentation issues: the
+redacted Authorization example was not executable and the JSON sent through
+PowerShell had a UTF-8 BOM. The actual API requires `Authorization: Bearer
+<key>` and BOM-free JSON.
+
+### Release and image security
+
+Clean-room Go release verification succeeded:
+
+    go get github.com/SGVARDHANVIKRANTHREDDY/queueforge/workerkit@v0.1.0
+    go get github.com/SGVARDHANVIKRANTHREDDY/queueforge/outbox@v0.1.0
+    go get github.com/SGVARDHANVIKRANTHREDDY/queueforge/sdk/go/queueforge@v0.1.0
+    go build
+
+The Trivy image scan of the locally built
+`ghcr.io/sgvardhanvikranthreddy/queueforge:v0.1.0` image reported zero
+HIGH/CRITICAL vulnerabilities for Alpine and all three Go binaries. Trivy
+also emitted a warning for missing details for `CVE-2026-107891`; the summary
+still reported zero vulnerabilities and the warning is retained as a caveat.
+
+The release image remains unpublished because the GHCR push returned
+`error from registry: denied`.
+
+Gitleaks findings were inspected in redacted output and classified as fake
+README/checklist curl examples and Python test fixtures. A
+[.gitleaksignore](../.gitleaksignore) was added with a comment and fingerprint
+for each historical finding. No plaintext secret was copied into this report.
+
+### Test depth
+
+The following commands passed:
+
+    PostgreSQL 15: integration, property, regression
+    PostgreSQL 16: integration, property, regression
+    PostgreSQL 17: integration, property, regression
+    Property test with QF_PROP_SEEDS=200: PASS (380.582s)
+    Clean-room release module build: PASS
+    Explicit real-worker SIGKILL chaos: PASS
+
+The required ten-run Linux race loop produced:
+
+    RACE_PASSES=9/10
+    run 1: FAIL TestStage3_SchedulesQuotasAndDelayedJobs
+    runs 2-10: PASS
+
+The failed integration test was immediately rerun in isolation with the race
+detector and passed in 1.363s. This establishes a one-off/flaky observation,
+not a 10/10 clean-race claim.
+
+Whole-repository coverage completed with the mandated command and reported:
+
+    total statements: 11.3%
+
+### Remaining external or deferred plan items
+
+The following were not claimed as completed because this workspace does not
+provide the required external prerequisites: three consecutive hosted green
+CI runs, public GHCR pull, GitHub Release creation, a real VPS/domain and
+21-day operations log, real-user canary, off-machine backups, second-host
+PostgreSQL TLS, public TLS/ZAP scan, outside engineer review, mutation
+injection/revert table, nightly seven-day soak, v0.1.1 upgrade/rollback,
+failed-migration production drill, kind cluster deployment, and documentation
+relocation of private interview material. The user-deferred tests and scripts
+listed at the start of this section are also intentionally excluded.

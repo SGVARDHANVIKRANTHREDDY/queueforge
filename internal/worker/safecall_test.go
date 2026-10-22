@@ -10,10 +10,7 @@ import (
 
 func TestSafeCall_PanicBecomesError(t *testing.T) {
 	h := func(ctx context.Context, p json.RawMessage) (json.RawMessage, error) {
-		var m map[string]string
-		_ = m["x"]
-		m["boom"] = "nil map write panics"
-		return nil, nil
+		panic("intentional panic fixture")
 	}
 	res, err := safeCall(h, context.Background(), nil)
 	if err == nil || !strings.Contains(err.Error(), "panicked") {

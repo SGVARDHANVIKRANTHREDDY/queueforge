@@ -63,8 +63,9 @@ func (a *API) Routes() http.Handler {
 	// Installing it unconditionally let any client spoof its address and
 	// defeat the failure limiter and the audit log's remote address.
 	if a.cfg.TrustForwardedFor {
-		r.Use(middleware.RealIP)
+		r.Use(trustedRemoteIP)
 	}
+
 	r.Use(middleware.Recoverer)
 	r.Use(a.corsMiddleware)
 	r.Use(a.metricsMiddleware)
@@ -120,6 +121,17 @@ func (a *API) Routes() http.Handler {
 	})
 
 	return r
+}
+
+func trustedRemoteIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+			if client := strings.TrimSpace(strings.Split(forwarded, ",")[0]); client != "" {
+				r.RemoteAddr = client
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (a *API) corsMiddleware(next http.Handler) http.Handler {

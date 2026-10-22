@@ -1,0 +1,16 @@
+# Historical README/checklist curl examples use deliberately fake redacted tokens.
+33447c9e04f6956485f616feead1a356ea963b9f:QueueForge Manual Verification and Launch Checklist.md:curl-auth-header:136
+33447c9e04f6956485f616feead1a356ea963b9f:README.md:curl-auth-header:40
+33447c9e04f6956485f616feead1a356ea963b9f:README.md:curl-auth-header:45
+33447c9e04f6956485f616feead1a356ea963b9f:sdk/python/tests/test_client.py:generic-api-key:22
+33447c9e04f6956485f616feead1a356ea963b9f:sdk/python/tests/test_client.py:generic-api-key:117
+e04a49ccc643b78d9f242f6a04da68e6e752f3db:QueueForge Manual Verification and Launch Checklist.md:curl-auth-header:136
+e04a49ccc643b78d9f242f6a04da68e6e752f3db:README.md:curl-auth-header:40
+e04a49ccc643b78d9f242f6a04da68e6e752f3db:README.md:curl-auth-header:45
+e04a49ccc643b78d9f242f6a04da68e6e752f3db:sdk/python/tests/test_client.py:generic-api-key:22
+e04a49ccc643b78d9f242f6a04da68e6e752f3db:sdk/python/tests/test_client.py:generic-api-key:117
+d3661997ce29dd634a5149b90319199a5ace4ce6:QueueForge Manual Verification and Launch Checklist.md:curl-auth-header:136
+d3661997ce29dd634a5149b90319199a5ace4ce6:README.md:curl-auth-header:40
+d3661997ce29dd634a5149b90319199a5ace4ce6:README.md:curl-auth-header:45
+d3661997ce29dd634a5149b90319199a5ace4ce6:sdk/python/tests/test_client.py:generic-api-key:22
+d3661997ce29dd634a5149b90319199a5ace4ce6:sdk/python/tests/test_client.py:generic-api-key:117

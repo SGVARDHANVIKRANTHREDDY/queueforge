@@ -4,7 +4,6 @@ package chaos_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -165,6 +164,6 @@ func TestChaos_PostgresOutageMidWorkload(t *testing.T) {
 		t.Fatalf("%d jobs went dead because of an infrastructure outage (they should have been retried)", dead)
 	}
 	if busy != 0 || outstanding != 0 {
-		t.Fatal(fmt.Sprintf("leak after outage: busy_slots=%d outstanding=%d", busy, outstanding))
+		t.Fatalf("leak after outage: busy_slots=%d outstanding=%d", busy, outstanding)
 	}
 }

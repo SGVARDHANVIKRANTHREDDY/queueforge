@@ -1,0 +1,13 @@
+{
+  "name": "Daily Placement Sync",
+  "task_type": "placement_notice.send",
+  "queue": "notifications",
+  "cron_expression": "0 9 * * *",
+  "timezone": "Asia/Kolkata",
+  "misfire_policy": "catch_up_one",
+  "priority": 6,
+  "payload": {
+    "sync_type": "daily_auto",
+    "target": "all_final_year"
+  }
+}

@@ -1,0 +1,337 @@
+openapi: 3.0.3
+info:
+  title: QueueForge API
+  version: 1.0.0
+  description: >
+    QueueForge is a PostgreSQL-backed distributed job queue and scheduler.
+    All business endpoints require API key authentication via `Authorization: Bearer <token>`.
+paths:
+  /healthz:
+    get:
+      summary: Liveness probe
+      responses:
+        '200':
+          description: Process alive
+  /readyz:
+    get:
+      summary: Readiness probe
+      responses:
+        '200':
+          description: Dependencies ready
+        '503':
+          description: Service unavailable
+  /v1/jobs:
+    post:
+      summary: Submit a new job
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+          required: false
+          description: Optional tenant-scoped client idempotency key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnqueueRequest'
+      responses:
+        '202':
+          description: Job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnqueueResponse'
+        '200':
+          description: Idempotent replay of existing job
+          headers:
+            Idempotent-Replay:
+              schema:
+                type: boolean
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnqueueResponse'
+        '400':
+          description: Malformed input
+        '409':
+          description: Idempotency key conflict
+        '429':
+          description: Rate limit or pending quota exceeded
+    get:
+      summary: List tenant jobs with cursor pagination
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [queued, running, succeeded, dead, cancelled]
+        - in: query
+          name: queue
+          schema:
+            type: string
+        - in: query
+          name: task_type
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: cursor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of jobs
+  /v1/jobs/batch:
+    post:
+      summary: Submit up to 100 jobs atomically (all or none)
+      description: >
+        One transaction, one commit. A rate-limit or quota rejection accepts no job from the batch.
+        Send a single Idempotency-Key header; job i is stored under "<key>#<i>", so retrying the
+        identical batch returns the original jobs (200, Idempotent-Replay header) and reusing the
+        key with a different batch is a 409.
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string, maxLength: 190 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [jobs]
+              properties:
+                jobs:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: { type: object, required: [task_type] }
+      responses:
+        '202': { description: All jobs accepted }
+        '200': { description: Idempotent replay of an earlier identical batch }
+        '400': { description: "Invalid batch size or an invalid entry (the message names the failing index)" }
+        '409': { description: Idempotency key reused for a different batch }
+        '429': { description: "Tenant rate limit or pending quota reached; nothing was accepted" }
+  /v1/jobs/{id}:
+    get:
+      summary: Retrieve job details and attempts
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job details
+        '404':
+          description: Job not found
+  /v1/jobs/{id}/cancel:
+    post:
+      summary: Cancel a queued job or request cancellation for a running job
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cancellation state updated
+        '404':
+          description: Job not found
+        '409':
+          description: Job already terminal
+  /v1/jobs/{id}/replay:
+    post:
+      summary: Explicitly replay a dead-letter job
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Job successfully requeued
+        '409':
+          description: Job is not in dead state
+  /v1/dead-letters:
+    get:
+      summary: List dead-letter jobs
+      responses:
+        '200':
+          description: List of dead jobs
+  /v1/schedules:
+    post:
+      summary: Create recurring cron schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+      responses:
+        '201':
+          description: Schedule created
+    get:
+      summary: List schedules
+      responses:
+        '200':
+          description: Schedules list
+  /v1/schedules/{id}:
+    get:
+      summary: Get schedule
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Schedule
+    patch:
+      summary: Pause or resume schedule
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paused:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated schedule
+    delete:
+      summary: Disable schedule
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Schedule disabled
+  /v1/queues/{queue}/stats:
+    get:
+      summary: Get queue statistics
+      parameters:
+        - in: path
+          name: queue
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Statistics
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    EnqueueRequest:
+      type: object
+      required:
+        - task_type
+        - payload
+      properties:
+        task_type:
+          type: string
+          example: placement_notice.send
+        queue:
+          type: string
+          default: default
+        payload:
+          type: object
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 9
+          default: 5
+        run_at:
+          type: string
+          format: date-time
+        max_attempts:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 5
+        timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 3600
+          default: 300
+    EnqueueResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        run_at:
+          type: string
+          format: date-time
+        status_url:
+          type: string
+    CreateScheduleRequest:
+      type: object
+      required:
+        - name
+        - task_type
+        - cron_expression
+      properties:
+        name:
+          type: string
+        queue:
+          type: string
+          default: default
+        task_type:
+          type: string
+        payload:
+          type: object
+        cron_expression:
+          type: string
+          example: "0 * * * *"
+        timezone:
+          type: string
+          default: "UTC"
+        misfire_policy:
+          type: string
+          enum: [skip, catch_up_one]
+          default: skip
+security:
+  - BearerAuth: []

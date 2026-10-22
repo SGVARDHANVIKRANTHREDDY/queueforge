@@ -1,0 +1,62 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Queued Jobs by Queue",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "queueforge_jobs_queued", "legendFormat": "{{queue}}" }
+      ]
+    },
+    {
+      "title": "Running Jobs by Queue",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        { "expr": "queueforge_jobs_running", "legendFormat": "{{queue}}" }
+      ]
+    },
+    {
+      "title": "Enqueue Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "rate(queueforge_jobs_enqueued_total[1m])", "legendFormat": "{{queue}}" }
+      ]
+    },
+    {
+      "title": "Job Outcomes (Completed)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "targets": [
+        { "expr": "rate(queueforge_jobs_completed_total[1m])", "legendFormat": "{{outcome}}" }
+      ]
+    },
+    {
+      "title": "Lease Recoveries & Retries",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "targets": [
+        { "expr": "rate(queueforge_job_lease_recoveries_total[1m])", "legendFormat": "Recoveries" },
+        { "expr": "rate(queueforge_job_retries_total[1m])", "legendFormat": "Retries" }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["queueforge", "queue", "jobs"],
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "QueueForge Overview",
+  "uid": "queueforge-overview",
+  "version": 1
+}

@@ -1,0 +1,7 @@
+{
+  "task_type": "",
+  "queue": "unauthorized_nonexistent_queue",
+  "priority": 15,
+  "max_attempts": 25,
+  "timeout_seconds": -10
+}

@@ -1,0 +1,52 @@
+# Resume & Interview Kit
+
+## Rule zero: numbers must come from YOUR run
+The figures below were measured on a 1-vCPU Linux container. **Re-run the benchmarks on your own machine and replace them.** An interviewer will ask "how did you measure that?" and you must be able to say "`go test -run TestBenchmark_DrainThroughput`, 1,200 no-op jobs, 4 workers, here is the output."
+
+```bash
+QF_BENCH_JOBS=1200 QF_BENCH_WORKERS=4 go test -v -run TestBenchmark_DrainThroughput ./tests/load/
+go test -v -run TestBenchmark_IdleLatency ./tests/load/
+go test -v -run RealKill9 ./tests/chaos/
+```
+To get an honest "before" number, check out the first commit, copy `tests/load/throughput_test.go` onto it, and run the same command.
+
+## Resume bullets (XYZ), fill in YOUR re-measured numbers
+**QueueForge: multi-tenant job queue on PostgreSQL** (Go, PostgreSQL, Docker, Prometheus, GitHub Actions)
+- Cut claim latency from **653 ms to ~1.4 ms** under a 400k-job unrelated backlog (flat from 0 to 400k) by redesigning the claim as a single-statement batch with per-(queue, type, priority) index probes; found via `EXPLAIN` that a volatile time function prevented an index bound. Also raised drain throughput from **16 to ~830 jobs/s** and idle pickup latency from **222 to ~9 ms** (`LISTEN/NOTIFY`).
+- Verified correctness with a model-based property test (5,000 random operations compared against an in-memory model after every step), real `kill -9` / Postgres-outage / network-fault chaos tests (recovery in **3.1 s**, zero lost jobs), and **mutation testing** of every guarantee (which exposed two blind spots in my own tests).
+- Found and fixed **24 defects** in review, each with a failing-first regression test (lease-recovery poison pill, clock-skew in 7 places, retention that could delete only 2,400 jobs/day, alerts that could never fire, a cross-tenant information leak); benchmarked against River and Asynq and documented where it loses (tuned River is ~1.8x faster).
+
+Do **not** claim "used in production" or any user count until it is true. Replace every number with one you measured on your own machine.
+
+## Pitches
+**30 seconds:** "It's a multi-tenant job queue built on Postgres. Workers claim jobs with `SKIP LOCKED` and hold fenced leases, so if a worker dies the job is recovered and a late stale worker can't overwrite the result. I profiled it, fixed three scaling defects, and took it from 16 to about 830 jobs/sec, and I test crash recovery by actually `kill -9`-ing a worker process."
+
+**5 minutes:** problem (reliable background work without Redis), data model (state machine enforced by CHECK constraints), claim path (priority, per-tenant slots, `SKIP LOCKED`), failure path (lease expiry, `settleFailedAttempt`, backoff with full jitter, DLQ), then two bugs you found and how a failing test proved each, then what you measured and its limits.
+
+**15 minutes:** add idempotency (request hash, 409 on mismatch), cron occurrence uniqueness, fairness trade-offs (strict priority can starve low priority: ADR-005), NOTIFY trade-offs (ADR-011), what you would do next (batch claims, partitioning `jobs`, outbox).
+
+## Questions you WILL be asked (answer from the code)
+1. **Why `SKIP LOCKED`?** Workers must not block each other on the same row; a locked row is simply someone else's work. Lock held only for the short claim tx; handlers run outside any transaction.
+2. **Walk through `ClaimJob`.** Candidate query (priority, run_at, created_at order; `EXISTS` free slot; excluded tenants) -> lock slot `SKIP LOCKED` (if contended, exclude tenant and retry, ADR-013) -> UPDATE job to running with lease -> reserve slot -> insert attempt -> commit.
+3. **Why `clock_timestamp()` not `now()`?** `now()` is the transaction start time and is frozen inside a tx; `clock_timestamp()` is wall time at call. Using the DB clock everywhere also avoids worker clock skew.
+4. **Exactly-once?** No. At-least-once. A crash after the side effect but before commit means a retry; handlers must be idempotent. The idempotency key protects submission, not execution.
+5. **What if the worker is alive but slow and its lease expires?** Another worker may start the job; the first worker's completion is rejected because `lease_token` no longer matches (fencing). Its side effects are not undone.
+6. **What happens if Postgres restarts?** Workers' claims/completions fail and retry on the next poll; nothing is lost because all state is durable; leases simply expire and recover.
+7. **How does NOTIFY fail?** Best-effort: missed if the listener is disconnected. That is why polling remains. Correctness never depends on it.
+8. **Why did the old benchmark say 16 jobs/s?** One claim per 250 ms tick per worker. (Tell the story of questioning the "bounded by handler work" claim.)
+9. **What does not scale?** Single Postgres primary; per-tenant rate bucket row lock serialises one tenant's enqueues; global `NOTIFY` lock at very high enqueue rates; `jobs` table growth (retention job + partitioning plan).
+10. **Why not Redis/Kafka/SQS?** ADR-001. Transactional enqueue + quota + idempotency in one commit beats dual writes at this scale; re-evaluate with measurements.
+
+## Amazon Leadership Principles mapping
+| LP | Story |
+|---|---|
+| Dive Deep | F-1 poison-pill transaction abort |
+| Invent & Simplify | F-3 drain loop + NOTIFY with polling fallback |
+| Are Right, A Lot | Questioned "bounded by handler work" with data |
+| Earn Trust | Rewrote the report with limits and the 20% enqueue regression |
+| Ownership | Real `kill -9` chaos test; runbooks |
+| Deliver Results | 16 -> 387 jobs/s, 222 -> 7 ms |
+| Insist on the Highest Standards | Regression test per bug, shown failing first |
+
+## Be honest about how you built it
+Interviewers care whether you *understand* the system, not who typed each line. If you used AI assistance for part of this, say so plainly and then show you understand it: open `ClaimJob` and `settleFailedAttempt` and explain them, break something on purpose and fix it live. Do not tell a story you could not retell from scratch. The best preparation is to re-implement one fix yourself (for example F-2) from the failing test, without looking at the solution.

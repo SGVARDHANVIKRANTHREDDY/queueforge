@@ -1,0 +1,221 @@
+name: QueueForge CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: "17 2 * * *"   # nightly: soak + Postgres-outage chaos (job "nightly" below)
+
+jobs:
+  lint-and-vet:
+    name: Lint, Format & Vet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Check Formatting (gofmt)
+        run: |
+          diffs=$(gofmt -l .)
+          if [ -n "$diffs" ]; then
+            echo "The following files need formatting:"
+            echo "$diffs"
+            exit 1
+          fi
+
+      - name: Go Vet
+        run: go vet ./...
+
+      - name: Python SDK tests
+        run: cd sdk/python && python -m unittest discover -s tests -v
+
+      - name: Build every package and binary
+        run: go build ./...
+
+      - name: go.mod / go.sum are tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum || { echo "run 'go mod tidy' and commit the result"; exit 1; }
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run Unit Tests with Race Detector
+        run: go test -v -race ./internal/...
+
+  integration-and-chaos-tests:
+    name: PostgreSQL Integration & Chaos Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: queueforge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # Every test creates its own private database (internal/testutil), so these are safe to run together.
+      - name: Integration, regression, security and property tests (race detector)
+        env:
+          QF_DATABASE_URL: postgres://postgres:postgres@localhost:5432/queueforge?sslmode=disable
+        run: go test -race -count=1 -coverprofile=coverage.out -coverpkg=./internal/... ./tests/integration/... ./tests/regression/... ./tests/security/... ./tests/property/...
+
+      - name: Coverage summary and minimum gate (60%)
+        run: |
+          total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
+          echo "total coverage: ${total}%"
+          awk -v t="$total" 'BEGIN { if (t+0 < 60) { print "coverage below 60%"; exit 1 } }'
+
+      - name: Chaos tests (real kill -9 of a worker process, network faults via fault-injecting proxy)
+        env:
+          QF_DATABASE_URL: postgres://postgres:postgres@localhost:5432/queueforge?sslmode=disable
+          QF_CHAOS_STRICT: "1"   # strict wasted-execution guard; valid because this step runs alone
+        run: go test -race -count=1 -p 1 ./tests/chaos/...
+
+      - name: "Benchmark smoke (correctness only: duplicates/missing/leaked slots must be zero)"
+        env:
+          QF_DATABASE_URL: postgres://postgres:postgres@localhost:5432/queueforge?sslmode=disable
+          QF_BENCH_JOBS: "1500"
+          QF_BENCH_WORKERS: "2"
+        run: go test -count=1 -run 'TestBenchmark_DrainThroughput|TestBenchmark_IdleLatency' ./tests/load/...
+
+  security-scan:
+    name: Security scan (vulnerabilities, secrets, image)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, so gitleaks sees every commit
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: govulncheck (known vulnerabilities in dependencies and stdlib actually called)
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+      - name: staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
+      - name: gitleaks (secrets in git history)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image
+        run: docker build -t queueforge:ci -f deploy/Dockerfile .
+      - name: trivy (OS and library vulnerabilities in the image)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: queueforge:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+  alert-rules:
+    name: Validate Prometheus alert rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: promtool check rules
+        run: |
+          docker run --rm -v "$PWD/deploy:/d" --entrypoint promtool prom/prometheus:v2.55.1 check rules /d/alerts.yml
+
+  nightly:
+    name: Nightly soak + Postgres outage
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Start PostgreSQL (a plain container, so the outage test can stop and start it)
+        run: |
+          docker run -d --name qfpg -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:16-alpine
+          for i in $(seq 1 30); do docker exec qfpg pg_isready -U postgres && break; sleep 1; done
+      - name: 15-minute soak (latency, memory, goroutines, slot/quota leaks, exactly-once outcomes)
+        env:
+          QF_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+          QF_SOAK_SECONDS: "900"
+          QF_SOAK_RATE: "150"
+        run: go test -count=1 -v -timeout 40m -run TestSoak ./tests/load/
+      - name: Postgres outage mid-workload
+        env:
+          QF_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+          QF_CHAOS_PG_STOP: docker stop qfpg
+          QF_CHAOS_PG_START: docker start qfpg
+        run: go test -count=1 -v -p 1 -run PostgresOutage ./tests/chaos/
+
+  build-binaries:
+    name: Build Binaries & Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build API Binary
+        run: go build -v -o bin/api ./cmd/api
+
+      - name: Build Worker Binary
+        run: go build -v -o bin/worker ./cmd/worker
+
+      - name: Build Admin Binary
+        run: go build -v -o bin/admin ./cmd/admin
+
+      - name: Build Docker Image
+        run: docker build -t queueforge:latest -f deploy/Dockerfile .
+
+  python-sdk:
+    name: Python SDK Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install SDK dependencies
+        run: |
+          pip install requests
+          python sdk/python/setup.py check

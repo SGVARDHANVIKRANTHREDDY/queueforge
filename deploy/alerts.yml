@@ -1,0 +1,89 @@
+# Prometheus alert rules for QueueForge. Every alert links a runbook. Validate with:
+#   promtool check rules deploy/alerts.yml
+# Thresholds are starting points: tune them to your workload and SLOs (see docs/DEPLOYMENT.md).
+groups:
+  - name: queueforge.queue
+    rules:
+      # The single best "is anything stuck?" signal: a job that is due but nobody has taken it.
+      - alert: QueueForgeJobsStuck
+        expr: max by (queue) (queueforge_oldest_runnable_job_age_seconds) > 60
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: "Queue {{ $labels.queue }}: a due job has waited {{ $value | humanizeDuration }}"
+          runbook: docs/runbooks/runbook-a.md
+
+      - alert: QueueForgeBacklogGrowing
+        expr: sum by (queue) (queueforge_jobs_runnable) > 1000 and deriv(sum by (queue) (queueforge_jobs_runnable)[10m:1m]) > 0
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Queue {{ $labels.queue }} has {{ $value }} runnable jobs and the backlog is growing"
+          runbook: docs/runbooks/runbook-a.md
+
+      - alert: QueueForgeNoLiveWorkers
+        expr: max(queueforge_workers_alive) < 1
+        for: 2m
+        labels: {severity: page}
+        annotations:
+          summary: "No worker has sent a heartbeat for over a minute"
+          runbook: docs/runbooks/runbook-a.md
+
+      - alert: QueueForgeQueueWaitSlow
+        expr: histogram_quantile(0.95, sum by (le, queue) (rate(queueforge_job_queue_wait_seconds_bucket[5m]))) > 30
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "p95 queue wait on {{ $labels.queue }} is {{ $value | humanizeDuration }}"
+          runbook: docs/runbooks/runbook-a.md
+
+  - name: queueforge.reliability
+    rules:
+      - alert: QueueForgeLeaseRecoveriesHigh
+        expr: sum by (queue) (rate(queueforge_job_lease_recoveries_total[10m])) > 0.1
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Workers are losing leases at {{ $value | humanize }}/s on {{ $labels.queue }} (crashes, OOM kills, or network trouble)"
+          runbook: docs/runbooks/runbook-b.md
+
+      - alert: QueueForgeDeadLetterSpike
+        expr: sum by (queue) (increase(queueforge_jobs_completed_total{outcome="dead"}[15m])) > 20
+        for: 0m
+        labels: {severity: ticket}
+        annotations:
+          summary: "{{ $value }} jobs went to the dead-letter queue on {{ $labels.queue }} in 15 minutes"
+          runbook: docs/runbooks/runbook-c.md
+
+      - alert: QueueForgeRetentionFallingBehind
+        expr: max(queueforge_retention_backlog_jobs) > 100000
+        for: 1h
+        labels: {severity: ticket}
+        annotations:
+          summary: "{{ $value }}+ expired jobs are waiting to be deleted: retention is not keeping up and the table is growing"
+          runbook: docs/runbooks/runbook-d.md
+
+      - alert: QueueForgeStatsRefreshFailing
+        expr: increase(queueforge_stats_refresh_errors_total[10m]) > 3
+        labels: {severity: ticket}
+        annotations:
+          summary: "Queue statistics cannot be read from the database; queue alerts may be stale"
+          runbook: docs/runbooks/runbook-d.md
+
+  - name: queueforge.database
+    rules:
+      - alert: QueueForgeDBPoolSaturated
+        expr: rate(queueforge_db_pool_empty_acquires_total[5m]) / clamp_min(rate(queueforge_db_pool_acquires_total[5m]), 1) > 0.2
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "More than 20% of connection acquisitions have to wait: the pool is saturated"
+          runbook: docs/runbooks/runbook-a.md
+
+      - alert: QueueForgeAPIErrors
+        expr: sum(rate(queueforge_api_requests_total{status_class="5xx"}[5m])) / clamp_min(sum(rate(queueforge_api_requests_total[5m])), 1) > 0.02
+        for: 10m
+        labels: {severity: page}
+        annotations:
+          summary: "More than 2% of API requests are failing with 5xx"
+          runbook: docs/runbooks/runbook-d.md

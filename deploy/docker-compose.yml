@@ -1,0 +1,67 @@
+# DEVELOPMENT ONLY (default passwords). For a real deployment use deploy/docker-compose.prod.yml.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: queueforge-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: queueforge
+    ports:
+      - "127.0.0.1:5432:5432" # loopback only: never publish a database to the network
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d queueforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["/app/api"]
+    container_name: queueforge-api
+    environment:
+      QF_HTTP_ADDR: "0.0.0.0:8080"
+      QF_METRICS_ADDR: "0.0.0.0:9090" # private ops listener (internal network only)
+      QF_DATABASE_URL: "postgres://postgres:postgrespassword@postgres:5432/queueforge?sslmode=disable"
+      QF_LOG_LEVEL: "info"
+      QF_LOG_FORMAT: "json"
+      QF_ALLOWED_QUEUES: "default,notifications,background,maintenance"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["/app/worker"]
+    environment:
+      QF_DATABASE_URL: "postgres://postgres:postgrespassword@postgres:5432/queueforge?sslmode=disable"
+      QF_LOG_LEVEL: "info"
+      QF_LOG_FORMAT: "json"
+      QF_ALLOWED_QUEUES: "default,notifications,background,maintenance"
+      QF_METRICS_ADDR: "0.0.0.0:9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      replicas: 2
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: queueforge-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

@@ -1,0 +1,146 @@
+# QueueForge on Kubernetes. NOT YET APPLIED TO A REAL CLUSTER: validate with
+#   kubectl apply --dry-run=server -f deploy/k8s/queueforge.yaml
+# Replace the image, the Secret values, and the Ingress host before use. PostgreSQL is NOT included:
+# use a managed database (RDS/Cloud SQL/...) with point-in-time recovery.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: queueforge
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: queueforge-config
+  namespace: queueforge
+data:
+  QF_HTTP_ADDR: "0.0.0.0:8080"
+  QF_METRICS_ADDR: "0.0.0.0:9090"
+  QF_LOG_FORMAT: "json"
+  QF_ALLOWED_ORIGINS: "https://queueforge.example.com"
+  QF_TRUST_FORWARDED_FOR: "true"       # only because the API is reachable solely through the ingress
+  QF_CLIENT_RATE_PER_SECOND: "200"
+  QF_CLIENT_RATE_BURST: "400"
+  QF_DATABASE_MAX_CONNS: "20"
+  QF_SHUTDOWN_TIMEOUT: "30s"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: queueforge-secrets
+  namespace: queueforge
+type: Opaque
+stringData:
+  # App role (DML only) and migration role: see deploy/sql/least_privilege.sql
+  QF_DATABASE_URL: "postgres://qf_app:CHANGE_ME@postgres.example.internal:5432/queueforge?sslmode=verify-full"
+  QF_MIGRATE_DATABASE_URL: "postgres://qf_migrate:CHANGE_ME@postgres.example.internal:5432/queueforge?sslmode=verify-full"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: queueforge-api
+  namespace: queueforge
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: queueforge-api }
+  template:
+    metadata:
+      labels: { app: queueforge-api }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      securityContext: { runAsNonRoot: true, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: api
+          image: ghcr.io/YOUR_ORG/queueforge:1.0.0   # pin an exact tag or digest, never :latest
+          command: ["/app/api"]
+          envFrom:
+            - configMapRef: { name: queueforge-config }
+            - secretRef: { name: queueforge-secrets }
+          ports:
+            - { name: http, containerPort: 8080 }
+            - { name: ops, containerPort: 9090 }
+          readinessProbe: { httpGet: { path: /readyz, port: http }, periodSeconds: 5, failureThreshold: 3 }
+          livenessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 10, failureThreshold: 3 }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: queueforge-api
+  namespace: queueforge
+spec:
+  selector: { app: queueforge-api }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: queueforge-worker
+  namespace: queueforge
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: queueforge-worker }
+  template:
+    metadata:
+      labels: { app: queueforge-worker }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      terminationGracePeriodSeconds: 45     # must exceed QF_SHUTDOWN_TIMEOUT so in-flight jobs can drain
+      securityContext: { runAsNonRoot: true, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: worker
+          image: ghcr.io/YOUR_ORG/queueforge:1.0.0
+          command: ["/app/worker"]
+          envFrom:
+            - configMapRef: { name: queueforge-config }
+            - secretRef: { name: queueforge-secrets }
+          ports:
+            - { name: ops, containerPort: 9090 }
+          readinessProbe: { httpGet: { path: /readyz, port: ops }, periodSeconds: 5, failureThreshold: 3 }
+          livenessProbe: { httpGet: { path: /healthz, port: ops }, periodSeconds: 10, failureThreshold: 6 }
+          resources:
+            requests: { cpu: 200m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: { name: queueforge-api, namespace: queueforge }
+spec:
+  minAvailable: 1
+  selector: { matchLabels: { app: queueforge-api } }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: { name: queueforge-worker, namespace: queueforge }
+spec:
+  minAvailable: 1
+  selector: { matchLabels: { app: queueforge-worker } }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: { name: queueforge-api, namespace: queueforge }
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: queueforge-api }
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+---
+# Only the ingress controller may reach the API; workers need no inbound traffic except Prometheus.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: queueforge-default-deny-ingress, namespace: queueforge }
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]

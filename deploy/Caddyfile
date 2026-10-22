@@ -1,0 +1,28 @@
+# Caddy obtains and renews a Let's Encrypt certificate for {$DOMAIN} automatically.
+# DNS for {$DOMAIN} must point at this server and ports 80/443 must be open.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Defence in depth: the API already serves /metrics only on a private listener, but make sure
+	# nothing operational can ever be proxied out.
+	@ops path /metrics /debug/*
+	respond @ops 404
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	# Basic abuse limit on request bodies (the API enforces its own limits too).
+	request_body {
+		max_size 1MB
+	}
+
+	reverse_proxy api:8080 {
+		health_uri /readyz
+		health_interval 10s
+	}
+}

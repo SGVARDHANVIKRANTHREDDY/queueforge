@@ -1,0 +1,13 @@
+{
+  "task_type": "placement_notice.send",
+  "queue": "notifications",
+  "payload": {
+    "notice_id": "notice_placement_001",
+    "company": "Google",
+    "role": "Systems Engineer",
+    "recipient_group": "cse_2028"
+  },
+  "priority": 7,
+  "max_attempts": 3,
+  "timeout_seconds": 120
+}

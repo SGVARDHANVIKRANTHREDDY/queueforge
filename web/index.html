@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QueueForge — Distributed Job Queue & Scheduler</title>
+  <meta name="description" content="High-performance PostgreSQL-backed distributed job queue and scheduler dashboard.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app" class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo-mark">⚡</div>
+        <div class="brand-text">
+          <h1>QueueForge</h1>
+          <span class="badge version-badge">v1.0.0</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <button id="nav-overview" class="nav-btn active" data-tab="overview">
+          <span class="icon">📊</span> Overview
+        </button>
+        <button id="nav-jobs" class="nav-btn" data-tab="jobs">
+          <span class="icon">📋</span> Jobs
+          <span id="badge-queued-count" class="pill-count">0</span>
+        </button>
+        <button id="nav-schedules" class="nav-btn" data-tab="schedules">
+          <span class="icon">⏱️</span> Schedules
+        </button>
+        <button id="nav-dead-letters" class="nav-btn" data-tab="deadletters">
+          <span class="icon">💀</span> Dead Letters
+          <span id="badge-dead-count" class="pill-count dead">0</span>
+        </button>
+        <button id="nav-workers" class="nav-btn" data-tab="workers">
+          <span class="icon">🤖</span> Workers
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="tenant-card">
+          <div class="tenant-info">
+            <span class="status-dot online"></span>
+            <span id="sidebar-tenant-name">Not Connected</span>
+          </div>
+          <button id="btn-auth-modal" class="auth-btn">Key Settings</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <h2 id="view-title">System Overview</h2>
+          <span id="live-indicator" class="live-pill">● LIVE POLLING (3s)</span>
+        </div>
+        <div class="topbar-right">
+          <button id="btn-refresh" class="btn btn-secondary">↻ Refresh</button>
+          <button id="btn-enqueue-modal" class="btn btn-primary">+ Enqueue Job</button>
+        </div>
+      </header>
+
+      <!-- View Containers -->
+      <div class="view-viewport">
+        <!-- 1. OVERVIEW VIEW -->
+        <section id="view-overview" class="view-panel active">
+          <!-- Metric Stat Cards -->
+          <div class="stats-grid">
+            <div class="stat-card card-glow-amber">
+              <div class="stat-header">
+                <span class="stat-label">QUEUED JOBS</span>
+                <span class="stat-icon">⏳</span>
+              </div>
+              <div class="stat-value" id="stat-queued">0</div>
+              <div class="stat-desc">Waiting for eligible workers</div>
+            </div>
+
+            <div class="stat-card card-glow-cyan">
+              <div class="stat-header">
+                <span class="stat-label">RUNNING SLOTS</span>
+                <span class="stat-icon">⚙️</span>
+              </div>
+              <div class="stat-value" id="stat-running">0</div>
+              <div class="stat-desc">Active lease reservations</div>
+            </div>
+
+            <div class="stat-card card-glow-green">
+              <div class="stat-header">
+                <span class="stat-label">SUCCEEDED (QUEUE)</span>
+                <span class="stat-icon">✅</span>
+              </div>
+              <div class="stat-value" id="stat-succeeded">0</div>
+              <div class="stat-desc">Committed results</div>
+            </div>
+
+            <div class="stat-card card-glow-red">
+              <div class="stat-header">
+                <span class="stat-label">DEAD LETTERS</span>
+                <span class="stat-icon">⚠️</span>
+              </div>
+              <div class="stat-value" id="stat-dead">0</div>
+              <div class="stat-desc">Retries exhausted / permanent</div>
+            </div>
+          </div>
+
+          <!-- Queue Breakdown & Active Workers -->
+          <div class="dashboard-grid-2">
+            <div class="glass-panel">
+              <div class="panel-header">
+                <h3>Queue Breakdown</h3>
+                <span class="tag">Allowlist Enforced</span>
+              </div>
+              <div class="table-container">
+                <table class="data-table" id="table-queues">
+                  <thead>
+                    <tr>
+                      <th>Queue</th>
+                      <th>Queued</th>
+                      <th>Running</th>
+                      <th>Succeeded</th>
+                      <th>Dead</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-queues">
+                    <tr><td colspan="5" class="empty-cell">Loading queue stats...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="glass-panel">
+              <div class="panel-header">
+                <h3>Active Worker Pool</h3>
+                <span class="tag">10s Heartbeat</span>
+              </div>
+              <div id="worker-list-cards" class="worker-cards">
+                <div class="empty-state">No workers registered yet.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Activity Stream -->
+          <div class="glass-panel mt-4">
+            <div class="panel-header">
+              <h3>Recent Jobs Timeline</h3>
+              <button class="btn btn-sm btn-ghost" id="btn-view-all-jobs">View All →</button>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Job ID</th>
+                    <th>Task Type</th>
+                    <th>Queue</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Run At</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-recent-jobs">
+                  <tr><td colspan="7" class="empty-cell">Loading jobs...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. JOBS VIEW -->
+        <section id="view-jobs" class="view-panel">
+          <div class="filter-bar glass-panel">
+            <div class="filter-group">
+              <label for="filter-status">Status</label>
+              <select id="filter-status" class="input-select">
+                <option value="">All Statuses</option>
+                <option value="queued">Queued</option>
+                <option value="running">Running</option>
+                <option value="succeeded">Succeeded</option>
+                <option value="dead">Dead</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="filter-queue">Queue</label>
+              <select id="filter-queue" class="input-select">
+                <option value="">All Queues</option>
+                <option value="default">default</option>
+                <option value="notifications">notifications</option>
+                <option value="background">background</option>
+                <option value="maintenance">maintenance</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="filter-task-type">Task Type</label>
+              <input type="text" id="filter-task-type" class="input-text" placeholder="e.g. echo, placement_notice.send">
+            </div>
+
+            <div class="filter-actions">
+              <button id="btn-apply-filters" class="btn btn-primary">Filter</button>
+              <button id="btn-reset-filters" class="btn btn-secondary">Reset</button>
+            </div>
+          </div>
+
+          <div class="glass-panel mt-4">
+            <div class="table-container">
+              <table class="data-table" id="table-jobs-full">
+                <thead>
+                  <tr>
+                    <th>Job ID</th>
+                    <th>Task Type</th>
+                    <th>Queue</th>
+                    <th>Priority</th>
+                    <th>Attempts</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-jobs-full">
+                  <tr><td colspan="8" class="empty-cell">No jobs match filters.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. SCHEDULES VIEW -->
+        <section id="view-schedules" class="view-panel">
+          <div class="section-actions">
+            <button id="btn-create-schedule-modal" class="btn btn-primary">+ Create Recurring Schedule</button>
+          </div>
+
+          <div class="glass-panel mt-3">
+            <div class="table-container">
+              <table class="data-table" id="table-schedules">
+                <thead>
+                  <tr>
+                    <th>Schedule Name</th>
+                    <th>Task Type</th>
+                    <th>Queue</th>
+                    <th>Cron Expression</th>
+                    <th>Timezone</th>
+                    <th>Misfire Policy</th>
+                    <th>Next Run</th>
+                    <th>State</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-schedules">
+                  <tr><td colspan="9" class="empty-cell">No recurring schedules created yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. DEAD LETTERS VIEW -->
+        <section id="view-deadletters" class="view-panel">
+          <div class="alert-banner">
+            <span class="icon">⚠️</span>
+            <div class="alert-text">
+              <strong>Dead-Letter Inspection & Audited Replay:</strong> Jobs in this view have exhausted configured retry attempts or failed with permanent errors. Replay requeues the work with an incremented replay generation while preserving attempt history.
+            </div>
+          </div>
+
+          <div class="glass-panel mt-3">
+            <div class="table-container">
+              <table class="data-table" id="table-deadletters">
+                <thead>
+                  <tr>
+                    <th>Job ID</th>
+                    <th>Task Type</th>
+                    <th>Queue</th>
+                    <th>Attempts</th>
+                    <th>Last Error Code</th>
+                    <th>Error Message</th>
+                    <th>Failed At</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-deadletters">
+                  <tr><td colspan="8" class="empty-cell">No dead-letter jobs. System healthy!</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. WORKERS VIEW -->
+        <section id="view-workers" class="view-panel">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <h3>Registered Worker Instances</h3>
+              <span class="tag">PostgreSQL Worker Registry</span>
+            </div>
+            <div class="table-container">
+              <table class="data-table" id="table-workers-full">
+                <thead>
+                  <tr>
+                    <th>Worker ID</th>
+                    <th>Process</th>
+                    <th>Hostname</th>
+                    <th>Queues</th>
+                    <th>Registered Tasks</th>
+                    <th>Last Seen</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-workers-full">
+                  <tr><td colspan="7" class="empty-cell">No active worker instances found.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- JOB DETAILS DRAWER / MODAL -->
+    <div id="modal-job-detail" class="modal-backdrop">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-header">
+          <h3 id="modal-job-id">Job Details</h3>
+          <button class="modal-close" id="btn-close-job-modal">&times;</button>
+        </div>
+        <div class="modal-body" id="job-detail-body">
+          <div class="job-meta-grid">
+            <div><strong>Status:</strong> <span id="detail-status" class="pill">queued</span></div>
+            <div><strong>Queue:</strong> <span id="detail-queue">default</span></div>
+            <div><strong>Task Type:</strong> <span id="detail-task">echo</span></div>
+            <div><strong>Priority:</strong> <span id="detail-priority">5</span></div>
+            <div><strong>Created:</strong> <span id="detail-created">--</span></div>
+            <div><strong>Attempts:</strong> <span id="detail-attempts">0 / 5</span></div>
+          </div>
+
+          <div class="tab-box mt-3">
+            <h4>Payload (JSON)</h4>
+            <pre id="detail-payload" class="code-block"></pre>
+          </div>
+
+          <div class="tab-box mt-3">
+            <h4>Result (JSON)</h4>
+            <pre id="detail-result" class="code-block"></pre>
+          </div>
+
+          <div class="tab-box mt-3">
+            <h4>Execution Attempts History</h4>
+            <table class="data-table-sm" id="table-attempts">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Outcome</th>
+                  <th>Duration</th>
+                  <th>Error Code</th>
+                  <th>Message</th>
+                  <th>Started</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-attempts"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-detail-cancel" class="btn btn-danger">Cancel Job</button>
+          <button id="btn-detail-replay" class="btn btn-primary" style="display:none;">Replay Job</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENQUEUE MODAL -->
+    <div id="modal-enqueue" class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Enqueue New Job</h3>
+          <button class="modal-close" id="btn-close-enqueue-modal">&times;</button>
+        </div>
+        <form id="form-enqueue" class="modal-body">
+          <div class="form-group">
+            <label for="eq-task">Task Type *</label>
+            <input type="text" id="eq-task" class="input-text" required value="placement_notice.send">
+          </div>
+          <div class="form-group">
+            <label for="eq-queue">Queue *</label>
+            <select id="eq-queue" class="input-select">
+              <option value="default">default</option>
+              <option value="notifications" selected>notifications</option>
+              <option value="background">background</option>
+              <option value="maintenance">maintenance</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group col">
+              <label for="eq-priority">Priority (0-9)</label>
+              <input type="number" id="eq-priority" class="input-text" min="0" max="9" value="5">
+            </div>
+            <div class="form-group col">
+              <label for="eq-max-attempts">Max Attempts</label>
+              <input type="number" id="eq-max-attempts" class="input-text" min="1" max="10" value="5">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="eq-idempotency">Idempotency Key (Optional)</label>
+            <input type="text" id="eq-idempotency" class="input-text" placeholder="e.g. client_tx_98124">
+          </div>
+          <div class="form-group">
+            <label for="eq-payload">Payload (JSON) *</label>
+            <textarea id="eq-payload" class="input-textarea" rows="4">{"notice_id": "placement_001", "role": "Senior Engineer", "group": "cs_2028"}</textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Submit Job</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- CREATE SCHEDULE MODAL -->
+    <div id="modal-schedule" class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Create Recurring Schedule</h3>
+          <button class="modal-close" id="btn-close-sched-modal">&times;</button>
+        </div>
+        <form id="form-schedule" class="modal-body">
+          <div class="form-group">
+            <label for="sc-name">Schedule Name *</label>
+            <input type="text" id="sc-name" class="input-text" required placeholder="e.g. Daily Student Digest">
+          </div>
+          <div class="form-group">
+            <label for="sc-task">Task Type *</label>
+            <input type="text" id="sc-task" class="input-text" required value="report.generate">
+          </div>
+          <div class="form-group">
+            <label for="sc-cron">5-Field Cron Expression *</label>
+            <input type="text" id="sc-cron" class="input-text" required value="0 9 * * *">
+            <small class="helper-text">Minute Hour Dom Month Dow (e.g. "0 9 * * *" for 9:00 AM daily)</small>
+          </div>
+          <div class="form-group">
+            <label for="sc-tz">IANA Timezone *</label>
+            <input type="text" id="sc-tz" class="input-text" required value="UTC">
+          </div>
+          <div class="form-group">
+            <label for="sc-misfire">Misfire Policy</label>
+            <select id="sc-misfire" class="input-select">
+              <option value="skip" selected>skip (drop missed occurrences)</option>
+              <option value="catch_up_one">catch_up_one (run latest missed occurrence)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="sc-payload">Payload (JSON)</label>
+            <textarea id="sc-payload" class="input-textarea" rows="3">{"type": "scheduled_digest"}</textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Create Schedule</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- AUTH SETTINGS MODAL -->
+    <div id="modal-auth" class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Tenant Key & Connection</h3>
+          <button class="modal-close" id="btn-close-auth-modal">&times;</button>
+        </div>
+        <form id="form-auth" class="modal-body">
+          <div class="alert-info">
+            <small>🔒 <strong>Memory-Only Key Session:</strong> In accordance with QueueForge security requirements (TDD 19 & PRD FR-16), your secret key is held in JavaScript runtime memory for this active browser tab and is NEVER persisted to localStorage or cookies.</small>
+          </div>
+          <div class="form-group mt-3">
+            <label for="auth-url">QueueForge API URL</label>
+            <input type="text" id="auth-url" class="input-text" value="http://localhost:8080">
+          </div>
+          <div class="form-group">
+            <label for="auth-key">Tenant Secret API Key *</label>
+            <input type="password" id="auth-key" class="input-text" placeholder="qf_live_...">
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Connect & Save to Session</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

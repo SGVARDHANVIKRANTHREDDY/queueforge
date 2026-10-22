@@ -1,0 +1,119 @@
+# Production-oriented stack for ONE small VPS (2 vCPU / 4 GB is plenty to start).
+#
+#   cp deploy/.env.prod.example deploy/.env.prod   # then edit every CHANGE_ME
+#   docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod up -d --build --scale worker=2
+#
+# Only Caddy (80/443) is published to the internet. Postgres, API, workers and Prometheus live on
+# an internal network. NOTE: this file is validated for syntax only in the dev sandbox; run the
+# smoke test (deploy/smoke.sh) after your first deploy.
+name: queueforge
+
+x-app-env: &app-env
+  QF_DATABASE_URL: postgres://queueforge:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/queueforge?sslmode=disable
+  QF_LOG_LEVEL: info
+  QF_LOG_FORMAT: json
+  QF_ALLOWED_QUEUES: default,notifications,background,maintenance
+  QF_ALLOWED_ORIGINS: ${QF_ALLOWED_ORIGINS:-https://${DOMAIN}}
+  QF_METRICS_ADDR: 0.0.0.0:9090 # reachable only on the internal network; never published
+  QF_DATABASE_MAX_CONNS: "20"
+  # The API is reachable ONLY through Caddy on the internal network, so X-Forwarded-For is trustworthy
+  # and the auth-failure limiter can key on the real client address. NEVER set this if the API is
+  # exposed directly: any client could then forge its address.
+  QF_TRUST_FORWARDED_FOR: "true"
+  QF_CLIENT_RATE_PER_SECOND: "200"
+  QF_CLIENT_RATE_BURST: "400"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: queueforge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: queueforge
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U queueforge -d queueforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No "ports:" on purpose. The database is not reachable from the internet.
+    shm_size: 256mb
+    deploy:
+      resources:
+        limits: { memory: 1536m }
+
+  api:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    command: ["/app/api"]
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      QF_HTTP_ADDR: 0.0.0.0:8080
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/readyz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits: { memory: 512m }
+
+  worker: # scale with: --scale worker=N  (no container_name: it breaks replicas)
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    command: ["/app/worker"]
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      QF_WORKER_CONCURRENCY: ${QF_WORKER_CONCURRENCY:-16}
+    depends_on:
+      postgres: { condition: service_healthy }
+      api: { condition: service_healthy } # api applies migrations on start
+    networks: [internal]
+    stop_grace_period: 40s # > QF_SHUTDOWN_TIMEOUT (30s): let in-flight jobs drain
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9090/readyz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits: { memory: 512m }
+
+  caddy:
+    image: caddy:2-alpine # automatic HTTPS (Let's Encrypt) for ${DOMAIN}
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [internal]
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=15d"]
+    volumes:
+      - ./prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    ports: ["127.0.0.1:9090:9090"] # loopback only: reach it with an SSH tunnel
+    networks: [internal]
+
+networks:
+  internal:
+
+volumes:
+  pgdata:
+  promdata:
+  caddy_data:
+  caddy_config:

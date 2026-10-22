@@ -133,3 +133,24 @@ QF_CHAOS_PG_STOP='service postgresql stop' QF_CHAOS_PG_START='service postgresql
 QF_SOAK_SECONDS=900 QF_SOAK_RATE=150 go test -v -timeout 40m -run TestSoak ./tests/load/
 cd bench/headtohead && go mod tidy && go build -o h2h .       # River / Asynq comparison
 ```
+
+## Reproduced on 2026-10-22
+
+Environment: Windows 11 host, Intel Core i7-13650HX, 14 physical cores, 20 logical
+processors, 7.6 GiB Docker Desktop memory, Go 1.27.0, PostgreSQL 16 in Docker.
+The load tests used the disposable `qf-pg` container.
+
+Three-run drain medians with 3,000 jobs and one worker:
+
+| Mode | Drain runs (seconds) | Median drain jobs/s |
+|---|---:|---:|
+| Per-job completion | 3.05, 2.45, 2.45 | 1,224 |
+| Batch completion | 3.15, 2.70, 2.55 | 1,176 |
+
+Batch completion was not faster in this reproduction, so it should remain disabled
+by default for this environment.
+
+Idle latency: 150 samples, p50 14.9 ms, p95 21.9 ms, p99 24.2 ms.
+
+The raw outputs are in `evidence/rerun-20261022-1409/bench-baseline.txt`,
+`bench-batch.txt`, and `bench-idle.txt`.

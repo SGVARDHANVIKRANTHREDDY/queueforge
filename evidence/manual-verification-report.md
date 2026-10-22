@@ -1168,3 +1168,95 @@ The remote was changed to HTTPS and publishing then succeeded:
 - `docker pull ghcr.io/sgvardhanvikranthreddy/queueforge:v0.1.0` was denied because the release workflow has not yet published the image.
 
 The second-run command outputs remain in the existing [evidence folder](.).
+
+## Fresh full rerun from checklist line 1: 2026-10-22 14:09
+
+This third pass attempted every executable checklist command again. Raw outputs are
+in [evidence/rerun-20261022-1409](./rerun-20261022-1409); the 117.63 MB soak
+output is preserved as the compressed `soak.txt.zip` file because GitHub rejects
+individual files over 100 MB.
+
+### Phases 0-5
+
+- Git, Go 1.27.0, Docker, Docker `hello-world`, and `curl` were available.
+- `python3`, `psql`, and `jq` were unavailable. The installed `python` command ran
+  the equivalent SDK suite successfully: 8 tests, `OK`.
+- The exact `docker run ... --name qf-pg` command failed because `qf-pg` already
+  existed. The existing disposable container reported `accepting connections`.
+- The exact module-path script refused to rerun because the module was already
+  renamed.
+- `go mod tidy`, `gofmt -l .`, and `go build ./...` passed.
+- `go vet ./...` failed on Windows-only `syscall.SysProcAttr.Setpgid` in
+  `tests/chaos/kill9_test.go`; the chaos tests also use unavailable
+  `syscall.Kill`.
+- The exact quick Go suite passed every non-chaos package and failed only the
+  chaos package at compilation. The exact race suite and all focused race
+  commands stopped before execution because `CGO_ENABLED=0`.
+- The exact `git add evidence && git commit` operation was not run against the
+  whole evidence tree because the workspace contains unrelated pre-existing
+  deleted PRD/TDD files and untracked benchmark artifacts. Only the new rerun
+  directory and report files were staged.
+
+### Phases 6-7
+
+- `docker compose ... up -d --build` built both QueueForge images successfully
+  but could not start PostgreSQL because host port 5432 was unavailable.
+- Service status, tenant creation, API-key creation, enqueue, idempotency replay,
+  batch, live UI, and Python live-API commands therefore could not reach a
+  running API. Curl requests returned timeouts or HTTP `000`.
+- Worker rebuild also built successfully but could not start for the same port
+  conflict.
+- The spoofed-IP loop returned HTTP `000` for all 60 requests because the API was
+  unavailable.
+- The literal error-redaction request timed out because no API was listening.
+- The temporary panic and secret-redaction handlers were not inserted because
+  the service required to exercise them was unavailable; no temporary code was
+  left in the repository.
+
+### Phases 8-10
+
+Fresh three-run benchmarks:
+
+- Per-job completion: 3.05s, 2.45s, 2.45s; median 2.45s / 1,224 jobs/s.
+- Batch completion: 3.15s, 2.70s, 2.55s; median 2.70s / 1,111 jobs/s.
+- Idle latency: p50 14.9ms, p95 21.9ms, p99 24.2ms.
+- Batch completion was slower and should remain disabled for this environment.
+- Machine: Intel Core i7-13650HX, 14 cores, 20 logical processors; Docker
+  Desktop reported 7.6 GiB available memory.
+
+Chaos tests failed at Windows compilation with `Setpgid`/`syscall.Kill`.
+The optional Redis command failed because port 6379 was already allocated.
+
+The 30-minute soak completed successfully:
+
+      SOAK_RESULT enqueued=271084 enqueue_errors=0 succeeded=270541 dead=543 open=0 leaked_slots=0 outstanding=0 succeeded_without_exactly_one_success_attempt=0
+      SOAK_RESULT drift heap_MB first/last third=7.4/8.6 goroutines=24/24 qwait_p95_ms=10/6
+      --- PASS: TestSoak (1811.22s)
+
+`govulncheck` reported 11 Go 1.27 standard-library advisories, including
+GO-2026-6809 and GO-2026-6617. The image build passed; gitleaks and Trivy were
+not installed. The least-privilege SQL script ran but reported:
+
+      ERROR: relation "public.audit_log" does not exist
+
+### Phases 11-15
+
+- The stale `QueueForge_TDD.md` check could not run because that file is absent
+  in the current workspace. The workspace also contains unrelated deletions of
+  the PRD/TDD files that were not reverted.
+- Human-only interview exercises, private-note relocation, real external task
+  execution, VPS provisioning, domain setup, monitoring, four-week dogfooding,
+  and incident recording were not fabricated.
+- The published Go module check succeeded from a fresh temporary directory.
+- `git push -u origin main` succeeded over the existing HTTPS remote; the
+  existing `v0.1.0` tag was already pushed.
+- `docker pull ghcr.io/.../queueforge:v0.1.0` failed because the release image
+  was not published. GitHub Actions showed CI failures in security, Python SDK,
+  and PostgreSQL/chaos jobs; binary/image build and lint jobs passed.
+- Smoke, backup, restore, and Kubernetes dry-run commands failed because there
+  was no public deployment, Windows lacks `/var/backups`, and no Kubernetes API
+  server was available.
+- The literal `docker kill <worker container>` command failed because the
+  placeholder is not a real container name.
+- Unauthenticated GitHub REST attempts to update description/topics returned
+  HTTP 401.

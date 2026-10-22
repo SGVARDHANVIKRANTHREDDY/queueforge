@@ -1,0 +1,34 @@
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/cmd/admin	[no test files]
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/cmd/api	[no test files]
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/cmd/worker	[no test files]
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/examples/echo-handler	[no test files]
+# github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/chaos_test [github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/chaos.test]
+tests\chaos\kill9_test.go:68:40: unknown field Setpgid in struct literal of type syscall.SysProcAttr
+tests\chaos\kill9_test.go:77:29: undefined: syscall.Kill
+tests\chaos\kill9_test.go:94:20: undefined: syscall.Kill
+tests\chaos\netfault_test.go:72:40: unknown field Setpgid in struct literal of type syscall.SysProcAttr
+tests\chaos\netfault_test.go:82:16: undefined: syscall.Kill
+tests\chaos\pg_outage_test.go:85:40: unknown field Setpgid in struct literal of type syscall.SysProcAttr
+tests\chaos\pg_outage_test.go:98:16: undefined: syscall.Kill
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/auth	5.564s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config	1.600s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain	1.829s
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/httpapi	[no test files]
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability	5.684s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres	2.869s
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/recovery	[no test files]
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/retention	[no test files]
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/scheduler	[no test files]
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/testutil	[no test files]
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/worker	5.859s
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/migrations	[no test files]
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/outbox	[no test files]
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/sdk/go/queueforge	10.588s
+FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/chaos [build failed]
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/integration	10.585s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/load	5.011s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/property	43.943s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/regression	37.024s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/security	15.988s
+?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/workerkit	[no test files]
+FAIL

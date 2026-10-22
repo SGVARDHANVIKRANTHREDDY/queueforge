@@ -10,119 +10,116 @@ tests\chaos\pg_outage_test.go:98:16: undefined: syscall.Kill
 ?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/cmd/api	[no test files]
 ?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/cmd/worker	[no test files]
 ?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/examples/echo-handler	[no test files]
-ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/auth	5.923s
---- FAIL: TestLoad_DatabaseMaxConnsEnvVarIsHonoured (0.00s)
-    config_test.go:11: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
-FAIL
-FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config	2.292s
-ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain	2.905s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/auth	7.590s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config	1.687s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain	2.087s
 ?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/httpapi	[no test files]
-ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability	5.955s
-ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres	3.387s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability	7.755s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres	2.624s
 ?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/recovery	[no test files]
 ?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/retention	[no test files]
 ?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/scheduler	[no test files]
 ?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/testutil	[no test files]
-ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/worker	6.140s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/worker	8.153s
 ?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/migrations	[no test files]
 ?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/outbox	[no test files]
---- FAIL: TestEnqueueAndWait_EndToEndWithRealWorker (0.00s)
-    client_test.go:76: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestRetryAfterLostResponseCreatesExactlyOneJob (0.00s)
-    client_test.go:107: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestRetryHonoursRetryAfterHeader (0.00s)
-    client_test.go:136: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestClientErrorsAreNotRetried (0.00s)
-    client_test.go:161: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestContextCancellationStopsRetrying (0.00s)
-    client_test.go:180: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
+--- FAIL: TestEnqueueAndWait_EndToEndWithRealWorker (0.04s)
+    client_test.go:76: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestRetryAfterLostResponseCreatesExactlyOneJob (0.03s)
+    client_test.go:107: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestRetryHonoursRetryAfterHeader (0.03s)
+    client_test.go:136: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestClientErrorsAreNotRetried (0.03s)
+    client_test.go:161: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestContextCancellationStopsRetrying (0.02s)
+    client_test.go:180: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
 FAIL
-FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/sdk/go/queueforge	7.786s
+FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/sdk/go/queueforge	9.362s
 FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/chaos [build failed]
---- FAIL: TestStage1_VerticalSlice (0.00s)
-    integration_test.go:29: failed to load config: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestStage2_IdempotencyAndRecovery (0.00s)
-    integration_test.go:29: failed to load config: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestStage3_SchedulesQuotasAndDelayedJobs (0.00s)
-    integration_test.go:29: failed to load config: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
+--- FAIL: TestStage1_VerticalSlice (0.14s)
+    integration_test.go:33: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestStage2_IdempotencyAndRecovery (0.03s)
+    integration_test.go:33: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestStage3_SchedulesQuotasAndDelayedJobs (0.03s)
+    integration_test.go:33: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
 FAIL
-FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/integration	7.668s
-ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/load	5.961s
---- FAIL: TestStateMachine (0.00s)
-    state_machine_test.go:63: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
+FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/integration	9.405s
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/load	7.153s
+--- FAIL: TestStateMachine (0.12s)
+    state_machine_test.go:65: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
 FAIL
-FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/property	4.681s
---- FAIL: TestCompleteJobsSuccessBatch_MatchesSingleCompletionSemantics (0.00s)
-    batch_completion_test.go:19: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestEnqueueJobTx_CommitsWithCallerTransaction (0.00s)
-    enqueue_tx_test.go:48: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestEnqueueJobTx_RollsBackWithCallerTransaction (0.00s)
-    enqueue_tx_test.go:69: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestEnqueueJobTx_QuotaRejectionLeavesCallerTransactionUsable (0.00s)
-    enqueue_tx_test.go:86: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestAlertsAndRunbooksOnlyReferenceMetricsThatExist (0.00s)
-    observability_test.go:50: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestQueueStatsCollectorReportsRealState (0.00s)
-    observability_test.go:87: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestWorkerMetricsCountRetriesAndDeadLetters (0.00s)
-    observability_test.go:198: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestQueueStatsCollectorReportsZerosForIdleQueues (0.00s)
-    observability_test.go:244: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestClaim_DoesNotIdleWhenTopTenantSlotIsContended (0.00s)
-    regression_test.go:75: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestRecovery_PoisonJobDoesNotBlockHealthyJobs (0.00s)
-    regression_test.go:110: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestClaim_ReturnsRealRunAt (0.00s)
-    regression_test.go:166: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestEnqueue_TimestampsComeFromDatabaseClock (0.00s)
-    regression_test.go:214: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestClaim_CostIndependentOfForeignTaskTypeBacklog (0.00s)
-    regression_test.go:280: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestClaim_CostIndependentOfDelayedBacklog (0.00s)
-    regression_test.go:296: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestClaim_SaturatedTenantDoesNotStarveOthers (0.00s)
-    regression_test.go:312: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestClaim_PriorityThenFIFOAcrossBatches (0.00s)
-    regression_test.go:361: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestClaim_ConcurrentWorkersNeverDoubleClaim (0.00s)
-    regression_test.go:415: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestRetention_DeletesOnlyOldTerminalJobsAndTheirChildren (0.00s)
-    retention_test.go:39: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestRetention_DrainsABacklogLargerThanOneBatch (0.00s)
-    retention_test.go:106: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestRetention_PoisonRowIsIsolatedAndReported (0.00s)
-    retention_test.go:122: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestRetention_SteadyStateCostIndependentOfTableSize (0.00s)
-    retention_test.go:153: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
+FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/property	5.969s
+--- FAIL: TestCompleteJobsSuccessBatch_MatchesSingleCompletionSemantics (0.05s)
+    batch_completion_test.go:21: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestEnqueueJobTx_CommitsWithCallerTransaction (0.03s)
+    enqueue_tx_test.go:48: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestEnqueueJobTx_RollsBackWithCallerTransaction (0.02s)
+    enqueue_tx_test.go:69: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestEnqueueJobTx_QuotaRejectionLeavesCallerTransactionUsable (0.03s)
+    enqueue_tx_test.go:86: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestAlertsAndRunbooksOnlyReferenceMetricsThatExist (0.03s)
+    observability_test.go:50: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestQueueStatsCollectorReportsRealState (0.03s)
+    observability_test.go:87: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestWorkerMetricsCountRetriesAndDeadLetters (0.03s)
+    observability_test.go:198: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestQueueStatsCollectorReportsZerosForIdleQueues (0.03s)
+    observability_test.go:244: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestClaim_DoesNotIdleWhenTopTenantSlotIsContended (0.03s)
+    regression_test.go:75: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestRecovery_PoisonJobDoesNotBlockHealthyJobs (0.03s)
+    regression_test.go:110: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestClaim_ReturnsRealRunAt (0.03s)
+    regression_test.go:166: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestEnqueue_TimestampsComeFromDatabaseClock (0.03s)
+    regression_test.go:214: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestClaim_CostIndependentOfForeignTaskTypeBacklog (0.03s)
+    regression_test.go:280: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestClaim_CostIndependentOfDelayedBacklog (0.03s)
+    regression_test.go:296: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestClaim_SaturatedTenantDoesNotStarveOthers (0.03s)
+    regression_test.go:312: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestClaim_PriorityThenFIFOAcrossBatches (0.03s)
+    regression_test.go:361: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestClaim_ConcurrentWorkersNeverDoubleClaim (0.03s)
+    regression_test.go:415: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestRetention_DeletesOnlyOldTerminalJobsAndTheirChildren (0.03s)
+    retention_test.go:39: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestRetention_DrainsABacklogLargerThanOneBatch (0.03s)
+    retention_test.go:106: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestRetention_PoisonRowIsIsolatedAndReported (0.04s)
+    retention_test.go:122: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestRetention_SteadyStateCostIndependentOfTableSize (0.02s)
+    retention_test.go:153: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
 FAIL
-FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/regression	6.122s
---- FAIL: TestBatchEnqueue_CreatesAllJobsAndIsIdempotent (0.00s)
-    batch_test.go:46: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestBatchEnqueue_IsAllOrNothing (0.00s)
-    batch_test.go:76: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestBatchEnqueue_RejectsBadSizesAndEntries (0.00s)
-    batch_test.go:97: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestBruteForceIsThrottledBeforeTouchingTheDatabase (0.00s)
-    security_test.go:150: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestExpiredAndRevokedKeysAreRejected (0.00s)
-    security_test.go:179: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestKeyRotationWithOverlap (0.00s)
-    security_test.go:206: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestLastUsedAtIsNotRewrittenOnEveryRequest (0.00s)
-    security_test.go:231: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestAuditLogRecordsControlPlaneActionsOnly (0.00s)
-    security_test.go:270: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestAuditLogIsAppendOnly (0.00s)
-    security_test.go:294: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestWorkersEndpointDoesNotLeakInfrastructure (0.00s)
-    security_test.go:312: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestTenantIsolationFuzz (0.00s)
-    security_test.go:334: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestTraceIDPropagatesFromRequestToStoredJob (0.00s)
-    security_test.go:433: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
---- FAIL: TestBruteForceCannotBeBypassedWithSpoofedForwardingHeaders (0.00s)
-    spoofed_ip_test.go:14: invalid database URL: parse "******localhost:5432/queueforge?sslmode=disable": first path segment in URL cannot contain colon
+FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/regression	8.015s
+--- FAIL: TestBatchEnqueue_CreatesAllJobsAndIsIdempotent (0.05s)
+    batch_test.go:46: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestBatchEnqueue_IsAllOrNothing (0.03s)
+    batch_test.go:76: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestBatchEnqueue_RejectsBadSizesAndEntries (0.03s)
+    batch_test.go:97: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestBruteForceIsThrottledBeforeTouchingTheDatabase (0.03s)
+    security_test.go:150: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestExpiredAndRevokedKeysAreRejected (0.03s)
+    security_test.go:179: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestKeyRotationWithOverlap (0.03s)
+    security_test.go:206: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestLastUsedAtIsNotRewrittenOnEveryRequest (0.02s)
+    security_test.go:231: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestAuditLogRecordsControlPlaneActionsOnly (0.03s)
+    security_test.go:270: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestAuditLogIsAppendOnly (0.03s)
+    security_test.go:294: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestWorkersEndpointDoesNotLeakInfrastructure (0.03s)
+    security_test.go:312: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestTenantIsolationFuzz (0.03s)
+    security_test.go:334: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestTraceIDPropagatesFromRequestToStoredJob (0.03s)
+    security_test.go:433: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+--- FAIL: TestBruteForceCannotBeBypassedWithSpoofedForwardingHeaders (0.03s)
+    spoofed_ip_test.go:14: connect to admin database: failed to ping database: failed to connect to `user=postgres database=queueforge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
 FAIL
-FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/security	6.753s
+FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/security	8.498s
 ?   	github.com/SGVARDHANVIKRANTHREDDY/queueforge/workerkit	[no test files]
 FAIL

@@ -1,0 +1,27 @@
+    throughput_test.go:140: BENCH_RESULT enqueue_jobs=3000
+    throughput_test.go:141: BENCH_RESULT enqueue_per_sec=540
+    throughput_test.go:142: BENCH_RESULT enqueue_p50_ms=20.65
+    throughput_test.go:143: BENCH_RESULT enqueue_p95_ms=67.54
+    throughput_test.go:144: BENCH_RESULT enqueue_p99_ms=140.14
+    throughput_test.go:225: BENCH_RESULT workers=1
+    throughput_test.go:226: BENCH_RESULT drain_seconds=3.80
+    throughput_test.go:227: BENCH_RESULT drain_jobs_per_sec=789
+    throughput_test.go:228: BENCH_RESULT duplicates=0 missing=0 leaked_slots=0 succeeded_in_db=3000
+    throughput_test.go:140: BENCH_RESULT enqueue_jobs=3000
+    throughput_test.go:141: BENCH_RESULT enqueue_per_sec=810
+    throughput_test.go:142: BENCH_RESULT enqueue_p50_ms=13.96
+    throughput_test.go:143: BENCH_RESULT enqueue_p95_ms=45.90
+    throughput_test.go:144: BENCH_RESULT enqueue_p99_ms=93.48
+    throughput_test.go:225: BENCH_RESULT workers=1
+    throughput_test.go:226: BENCH_RESULT drain_seconds=2.85
+    throughput_test.go:227: BENCH_RESULT drain_jobs_per_sec=1052
+    throughput_test.go:228: BENCH_RESULT duplicates=0 missing=0 leaked_slots=0 succeeded_in_db=3000
+    throughput_test.go:140: BENCH_RESULT enqueue_jobs=3000
+    throughput_test.go:141: BENCH_RESULT enqueue_per_sec=991
+    throughput_test.go:142: BENCH_RESULT enqueue_p50_ms=12.34
+    throughput_test.go:143: BENCH_RESULT enqueue_p95_ms=33.44
+    throughput_test.go:144: BENCH_RESULT enqueue_p99_ms=91.93
+    throughput_test.go:225: BENCH_RESULT workers=1
+    throughput_test.go:226: BENCH_RESULT drain_seconds=2.40
+    throughput_test.go:227: BENCH_RESULT drain_jobs_per_sec=1250
+    throughput_test.go:228: BENCH_RESULT duplicates=0 missing=0 leaked_slots=0 succeeded_in_db=3000

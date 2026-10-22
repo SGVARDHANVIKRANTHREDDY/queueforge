@@ -139,7 +139,7 @@ jobs:
       - name: Build image
         run: docker build -t queueforge:ci -f deploy/Dockerfile .
       - name: trivy (OS and library vulnerabilities in the image)
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: queueforge:ci
           severity: HIGH,CRITICAL
@@ -220,5 +220,5 @@ jobs:
 
       - name: Install SDK dependencies
         run: |
-          pip install requests
+          python -m pip install --upgrade pip setuptools requests
           python sdk/python/setup.py check

@@ -1,6 +1,7 @@
 -- Least-privilege roles for QueueForge (closes THREAT_MODEL gap T14).
 --
--- Run ONCE as a superuser, after the first migration has created the schema, e.g.:
+-- Run migrations first, then run this ONCE as a superuser, e.g.:
+--   goose -dir migrations postgres "$SUPERUSER_URL" up
 --   psql "$SUPERUSER_URL" -v app_pw="'...'" -v migrate_pw="'...'" -f deploy/sql/least_privilege.sql
 --
 -- Result:
@@ -8,6 +9,14 @@
 --   qf_app     : DML only (no CREATE/DROP/ALTER/TRUNCATE) -> QF_DATABASE_URL (API, workers)
 -- A SQL-injection or compromised app process can then no longer drop tables or alter constraints.
 -- NOTE: audit_log is append-only by trigger; qf_app additionally gets no UPDATE/DELETE on it.
+\set ON_ERROR_STOP on
+
+DO $$
+BEGIN
+  IF to_regclass('public.audit_log') IS NULL THEN
+    RAISE EXCEPTION 'QueueForge migrations have not run: public.audit_log is missing';
+  END IF;
+END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'qf_migrate') THEN CREATE ROLE qf_migrate LOGIN; END IF;

@@ -145,7 +145,7 @@ Three-run drain medians with 3,000 jobs and one worker:
 | Mode | Drain runs (seconds) | Median drain jobs/s |
 |---|---:|---:|
 | Per-job completion | 3.05, 2.45, 2.45 | 1,224 |
-| Batch completion | 3.15, 2.70, 2.55 | 1,176 |
+| Batch completion | 3.15, 2.70, 2.55 | 1,111 |
 
 Batch completion was not faster in this reproduction, so it should remain disabled
 by default for this environment.
@@ -154,3 +154,9 @@ Idle latency: 150 samples, p50 14.9 ms, p95 21.9 ms, p99 24.2 ms.
 
 The raw outputs are in `evidence/rerun-20261022-1409/bench-baseline.txt`,
 `bench-batch.txt`, and `bench-idle.txt`.
+
+The same soak run completed with `enqueued=271084`, `enqueue_errors=0`,
+`succeeded=270541`, `dead=543`, `open=0`, `leaked_slots=0`, and
+`outstanding=0`. There were zero successful jobs without exactly one successful
+attempt. Heap drift was 7.4 MB to 8.6 MB, goroutines were 24 to 24, and
+queue-wait p95 was 10 ms to 6 ms. The test passed.

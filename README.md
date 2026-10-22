@@ -131,7 +131,7 @@ Metrics, alerts and runbooks: `deploy/alerts.yml`, `docs/runbooks/`. Production 
 ## Run the tests
 
 ```bash
-export QF_DATABASE_URL='postgres://postgres:postgres@localhost:5432/queueforge?sslmode=disable'
+export QF_DATABASE_URL='postgres://postgres:postgres@localhost:55432/queueforge?sslmode=disable'
 go vet ./... && go test -race ./...                              # needs a reachable PostgreSQL 16
 (cd sdk/python && python -m unittest discover -s tests -v)       # no database needed
 ```

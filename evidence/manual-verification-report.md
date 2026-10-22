@@ -1260,3 +1260,31 @@ not installed. The least-privilege SQL script ran but reported:
   placeholder is not a real container name.
 - Unauthenticated GitHub REST attempts to update description/topics returned
   HTTP 401.
+
+### GitHub Actions failure logs for run 39754996015
+
+The failed steps were retrieved from the Actions run for commit `2405028`.
+The relevant log excerpts were:
+
+Security scan, before any scan command ran:
+
+      ##[error]Unable to resolve action `aquasecurity/trivy-action@0.28.0`, unable to find version `0.28.0`
+
+Python SDK verification:
+
+      Traceback (most recent call last):
+      ModuleNotFoundError: No module named 'setuptools'
+      ##[error]Process completed with exit code 1.
+
+PostgreSQL integration and chaos:
+
+      Integration, regression, security and property tests (race detector): success
+      Chaos tests (real kill -9 of a worker process, network faults via fault-injecting proxy): failure
+
+The PostgreSQL service log during that failed chaos step also contained repeated
+connection-abort messages, including:
+
+      LOG: unexpected EOF on client connection with an open transaction
+
+The retrieved Actions log did not expose a more specific Go assertion in its
+tail, so the exact chaos assertion remains unresolved rather than guessed.

@@ -1117,3 +1117,54 @@ No VPS, domain, public URL, external monitor, Kubernetes cluster, or real tenant
 4. Review and update stale `QF_DATABASE_TLS_MODE` documentation references.
 5. Configure GitHub SSH credentials (or an authenticated HTTPS remote), then push `main` and `v0.1.0`.
 6. Complete the human-only phases against disposable/test infrastructure.
+
+## Rerun from checklist start: 2026-10-22 13:02-13:35
+
+This rerun was performed after creating the empty GitHub repository
+`github.com/SGVARDHANVIKRANTHREDDY/queueforge`.
+
+### Rerun results
+
+- `git --version`, `go version`, Docker CLI, Docker `hello-world`, and `go build ./...` passed.
+- The exact `python3` command still failed because Windows does not expose a `python3` executable. The installed `python` interpreter passed the 8 Python SDK tests in the earlier run.
+- `psql`, `jq`, `gitleaks`, and `trivy` remain unavailable.
+- The exact module-path script correctly refused to rerun because the module is already renamed:
+
+      go.mod module is not 'queueforge' (already renamed?)
+
+- `go mod tidy` and the final `gofmt -l .` check passed.
+- `go vet ./...` still fails on Windows-only chaos-test APIs:
+
+      unknown field Setpgid in struct literal of type syscall.SysProcAttr
+
+- All exact `-race` commands still stop before test execution because this Go installation has `CGO_ENABLED=0`:
+
+      go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
+
+- Docker image builds passed. The development Compose stack still cannot start because an unrelated PostgreSQL process owns host port 5432. The process was not terminated.
+- The exact benchmark commands completed successfully. The latest baseline drain times were 2.65s, 2.45s, and 2.40s; batch-completion drain times were 2.75s, 2.60s, and 2.55s. Batch completion remained slower in this environment. Latest idle latency was p50 16.2ms, p95 21.8ms, p99 31.4ms.
+- Chaos commands still fail to compile on Windows because of `Setpgid` and `syscall.Kill`.
+- `govulncheck` again reported the Go 1.27 standard-library advisories, including GO-2026-6809 and GO-2026-6617. Full output remains in [govulncheck.txt](./govulncheck.txt).
+- The exact gitleaks and Trivy commands failed because those tools are not installed.
+- The live API quickstart, tenant creation, API key creation, and smoke test could not run because the Compose API was not running.
+- Backup and restore could not run locally because the production backup path `/var/backups` is not available on Windows.
+- The Kubernetes dry run could not contact a Kubernetes API server.
+
+### GitHub publishing results
+
+The SSH remote initially failed with:
+
+    git@github.com: Permission denied (publickey).
+
+The remote was changed to HTTPS and publishing then succeeded:
+
+- `main` pushed to `origin/main`.
+- `v0.1.0` pushed to `origin` and is visible at `refs/tags/v0.1.0`.
+- A fresh temporary Go module successfully ran:
+
+      go get github.com/SGVARDHANVIKRANTHREDDY/queueforge/workerkit@v0.1.0
+
+- GitHub Actions run 1 was created and observed in `queued` state.
+- `docker pull ghcr.io/sgvardhanvikranthreddy/queueforge:v0.1.0` was denied because the release workflow has not yet published the image.
+
+The second-run command outputs remain in the existing [evidence folder](.).

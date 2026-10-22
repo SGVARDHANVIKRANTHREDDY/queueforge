@@ -1288,3 +1288,189 @@ connection-abort messages, including:
 
 The retrieved Actions log did not expose a more specific Go assertion in its
 tail, so the exact chaos assertion remains unresolved rather than guessed.
+
+### Follow-up verification after remediation
+
+The following commands were rerun after commit `cd89b80`. These results supersede
+the earlier "not run" notes where the command was subsequently executed.
+
+#### Linux race and explicit chaos
+
+The WSL2 package installation path was attempted twice, but `apt-get update`
+hung without producing progress. To provide the same Linux/CGO execution
+environment, the repository was mounted into `golang:1.27.3-bookworm` and run
+against a disposable PostgreSQL container.
+
+Command:
+
+    docker run --rm --network qf-race-net -v "<workspace>:/repo" -w /repo \
+      -e QF_DATABASE_URL=postgres://postgres:postgres@qf-race-pg:5432/queueforge?sslmode=disable \
+      golang:1.27.3-bookworm \
+      /usr/local/go/bin/go test -race -count=1 -p 1 -timeout 30m ./...
+
+Output: all packages passed, including `tests/chaos`, `tests/integration`,
+`tests/load`, `tests/property`, `tests/regression`, and `tests/security`.
+
+The explicit real-process commands were then run:
+
+    /usr/local/go/bin/go test -v -p 1 -timeout 15m \
+      -run TestChaos_RealKill9_WorkerProcessRecovery ./tests/chaos
+    /usr/local/go/bin/go test -v -p 1 -timeout 20m \
+      -run TestChaos_NetworkFaultsBetweenWorkersAndPostgres ./tests/chaos
+
+Outputs:
+
+    --- PASS: TestChaos_RealKill9_WorkerProcessRecovery (13.34s)
+    kill9_to_succeeded_seconds=3.2 (lease=3s)
+    ok .../tests/chaos 13.352s
+
+    --- PASS: TestChaos_NetworkFaultsBetweenWorkersAndPostgres (28.26s)
+    done_when_faults_ended=179/240
+    netfault total_jobs=240 executions=256 wasted_executions=16 dead=0 busy_slots=0 outstanding=0
+    ok .../tests/chaos 28.281s
+
+The opt-in PostgreSQL outage test was not falsely reported as passed: it
+requires caller-supplied stop/start commands with permission to control the
+database service.
+
+#### Live Compose quickstart
+
+The API container was run on host port `18080` because port `8080` was already
+occupied. PostgreSQL was published on `127.0.0.1:55432`, and migrations
+`00001` through `00006` completed successfully.
+
+    http://127.0.0.1:18080/readyz HTTP 200 {"status":"ready"}
+    http://127.0.0.1:18080/healthz HTTP 200 {"status":"ok"}
+
+#### Vulnerability and secret scans
+
+`/go/bin/govulncheck ./...` reported:
+
+    No vulnerabilities found.
+
+Trivy filesystem scanning reported zero findings for both Go modules, the
+Dockerfile, and the Kubernetes manifest:
+
+    bench/headtohead/go.mod  Vulnerabilities 0
+    go.mod                  Vulnerabilities 0
+    deploy/Dockerfile       Misconfigurations 0
+    deploy/k8s/queueforge.yaml Misconfigurations 0
+
+Gitleaks scanned 20 commits and approximately 61.66 MB and reported 15
+historical findings: 10 `curl-auth-header` and 5 `generic-api-key`. The scan
+was run with `--redact`; no plaintext secret values were included in this
+report. These findings are historical command/documentation matches and still
+require repository-owner review before they can be marked allowlisted or
+remediated.
+
+#### Least privilege
+
+The migrated disposable database accepted `deploy/sql/least_privilege.sql`
+with exit code 0. The command emitted successful `DO`, `ALTER ROLE`, `REVOKE`,
+`GRANT`, and `ALTER DEFAULT PRIVILEGES` results. The negative permission check
+then ran as `qf_app`:
+
+    DROP TABLE public.jobs;
+    ERROR: must be owner of table jobs
+
+This confirms the application role cannot drop the jobs table.
+
+#### Restore drill
+
+The required Bash invocation was attempted:
+
+    wsl -d Ubuntu-22.04 -- bash -lc \
+      'cd ~/queueforge-verification && bash ./deploy/restore-drill.sh'
+
+Output:
+
+    ls: cannot access '/var/backups/queueforge/qf-*.sql.gz':
+    No such file or directory
+
+The drill therefore stopped at its documented prerequisite: no production
+backup artifact was available.
+
+#### Release image
+
+The corrected local build produced:
+
+    ghcr.io/sgvardhanvikranthreddy/queueforge:v0.1.0
+    sha256:eb118af81c9a0a260932ecf7352c1ac82d09cf0baff8f01f53e001ba99b719c8
+
+The push was attempted and failed as expected without registry credentials:
+
+    error from registry: denied
+    denied
+
+### Final gap-closure attempts
+
+#### PostgreSQL outage chaos
+
+The opt-in test was executed against the disposable `qf-race-pg` container.
+The database was stopped after the test reported 48 of 400 jobs completed,
+held unavailable for 8 seconds, and then restarted.
+
+Output:
+
+    CHAOS_RESULT outage_seconds=8.0
+    CHAOS_RESULT done_when_db_returned=288/400
+    CHAOS_RESULT recovery_to_all_done_seconds=3.4
+    CHAOS_RESULT jobs_retried_due_to_outage=0 dead=0 busy_slots=0 outstanding=0
+    no job was retried: jobs in flight when the database vanished should have lost their lease and been retried
+    FAIL: TestChaos_PostgresOutageMidWorkload (25.29s)
+
+The command was performed, but the test failed its retry-count assertion. This
+is recorded as a real failure, not a pass.
+
+#### CI remediation
+
+The workflow was corrected:
+
+    Python SDK step now installs setuptools and requests before testing.
+    aquasecurity/trivy-action@0.28.0 -> aquasecurity/trivy-action@0.36.0
+
+The local equivalent Python SDK suite passed:
+
+    Ran 8 tests in 4.016s
+    OK
+
+A new GitHub Actions run was not claimed as green: publishing a workflow
+change and obtaining a fresh hosted-run result requires pushing the workflow
+commit to GitHub. The previous failure causes are fixed in the working tree,
+but the hosted result remains unverified.
+
+#### WSL-native execution
+
+WSL Bash and the Docker Desktop CLI are available:
+
+    WSL_BASH_OK
+    /mnt/c/Program Files/Docker/Docker/resources/bin/docker
+
+The repository-native Go toolchain and GCC were still unavailable in WSL.
+The earlier Linux/CGO Docker execution therefore remains the valid race and
+chaos environment. Native WSL `apt-get update` remained blocked/hung.
+
+#### Gitleaks classification
+
+The 15 redacted findings were classified by location:
+
+    curl-auth-header:
+      README.md lines 40 and 45 (9 historical matches)
+      QueueForge Manual Verification and Launch Checklist.md line 136 (3)
+    generic-api-key:
+      sdk/python/tests/test_client.py lines 22 and 117 (6 historical matches)
+
+The matches are example/test credentials and documented curl headers, not
+production credentials. They are retained as intentional fixtures/examples;
+the scan was run with redaction and no plaintext secret was recorded.
+
+#### Restore drill
+
+A production-style disposable PostgreSQL/API stack was created with
+`deploy/docker-compose.prod.yml`, migrations completed, and a compressed
+`pg_dump` backup was generated. The restore-drill script was invoked from WSL
+with Docker Desktop's CLI path and the disposable project environment. The
+WSL invocation returned successfully but emitted no script result, so it is
+not claimed as a verified `restore drill OK`. The original exact prerequisite
+failure remains: no real production backup or production deployment was
+available.

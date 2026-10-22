@@ -34,7 +34,10 @@ jobs:
         run: go vet ./...
 
       - name: Python SDK tests
-        run: cd sdk/python && python -m unittest discover -s tests -v
+        run: |
+          python -m pip install --upgrade pip setuptools requests
+          cd sdk/python
+          python -m unittest discover -s tests -v
 
       - name: Build every package and binary
         run: go build ./...
@@ -136,7 +139,7 @@ jobs:
       - name: Build image
         run: docker build -t queueforge:ci -f deploy/Dockerfile .
       - name: trivy (OS and library vulnerabilities in the image)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           image-ref: queueforge:ci
           severity: HIGH,CRITICAL

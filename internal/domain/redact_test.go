@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
 )
 
 func TestRedactSecrets(t *testing.T) {

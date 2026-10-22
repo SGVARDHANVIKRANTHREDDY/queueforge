@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/testutil"
 	"github.com/google/uuid"
-	"queueforge/internal/config"
-	"queueforge/internal/postgres"
-	"queueforge/internal/testutil"
 )
 
 // Batch completion must behave exactly like N single completions: every job fenced by its own

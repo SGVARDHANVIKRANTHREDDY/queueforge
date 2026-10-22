@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
 )
 
 func TestBackoffPolicy_DeterministicDelay(t *testing.T) {

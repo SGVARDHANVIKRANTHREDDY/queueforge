@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/google/uuid"
-	"queueforge/internal/domain"
-	"queueforge/internal/postgres"
 )
 
 type contextKey string

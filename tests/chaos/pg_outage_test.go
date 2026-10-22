@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/google/uuid"
-	"queueforge/internal/config"
-	"queueforge/internal/postgres"
 )
 
 // TestChaos_PostgresOutageMidWorkload stops the database while two real worker processes are

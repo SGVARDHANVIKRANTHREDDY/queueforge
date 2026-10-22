@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/google/uuid"
-	"queueforge/internal/config"
-	"queueforge/internal/domain"
-	"queueforge/internal/observability"
-	"queueforge/internal/postgres"
 )
 
 type Handler func(ctx context.Context, payload json.RawMessage) (json.RawMessage, error)

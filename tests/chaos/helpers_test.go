@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"queueforge/internal/config"
-	"queueforge/internal/testutil"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/testutil"
 )
 
 // privateDatabase creates, migrates and (on cleanup) drops a throwaway database and returns its

@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/auth"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/google/uuid"
-	"queueforge/internal/auth"
-	"queueforge/internal/domain"
-	"queueforge/internal/postgres"
 )
 
 // maxBatchJobs bounds one batch request. 100 jobs commit in a single transaction.

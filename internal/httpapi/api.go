@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/auth"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
-	"queueforge/internal/auth"
-	"queueforge/internal/config"
-	"queueforge/internal/domain"
-	"queueforge/internal/observability"
-	"queueforge/internal/postgres"
 )
 
 type API struct {

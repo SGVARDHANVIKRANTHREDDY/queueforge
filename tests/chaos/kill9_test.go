@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/google/uuid"
-	"queueforge/internal/config"
-	"queueforge/internal/domain"
-	"queueforge/internal/postgres"
 )
 
 // TestChaos_RealKill9_WorkerProcessRecovery is the genuine article: it builds the real worker

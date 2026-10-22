@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"queueforge/internal/config"
-	"queueforge/internal/httpapi"
-	"queueforge/internal/observability"
-	"queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/httpapi"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 )
 
 func main() {

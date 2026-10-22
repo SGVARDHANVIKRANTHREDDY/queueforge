@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/auth"
 	"github.com/google/uuid"
-	"queueforge/internal/auth"
 )
 
 func TestPrincipal_HasPermission(t *testing.T) {

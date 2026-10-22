@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/google/uuid"
-	"queueforge/internal/postgres"
 )
 
 func (g *rig) postBatch(key, ip, idemKey string, n int) (int, map[string]any) {

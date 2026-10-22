@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/worker"
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
-	"queueforge/internal/domain"
-	"queueforge/internal/observability"
-	"queueforge/internal/postgres"
-	"queueforge/internal/worker"
 )
 
 // captureRegisterer records the metric names a set of collectors would expose.

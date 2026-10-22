@@ -10,8 +10,8 @@ import (
 )
 
 type Config struct {
-	HTTPAddr                 string
-	DatabaseURL              string
+	HTTPAddr    string
+	DatabaseURL string
 	// MigrateDatabaseURL is an optional DDL-capable role used only for migrations (least privilege).
 	MigrateDatabaseURL       string
 	DatabaseMaxConns         int
@@ -155,7 +155,7 @@ func Load() (*Config, error) {
 		ClientRateBurst:          getEnvInt("QF_CLIENT_RATE_BURST", 400),
 		BatchCompletion:          getEnvBool("QF_BATCH_COMPLETION", false),
 		BatchCompletionMax:       getEnvInt("QF_BATCH_COMPLETION_MAX", 64),
-		MaxPayloadBytes:          int64(getEnvInt("QF_MAX_PAYLOAD_BYTES", 262144)),  // 256 KB
+		MaxPayloadBytes:          int64(getEnvInt("QF_MAX_PAYLOAD_BYTES", 262144)), // 256 KB
 		ShutdownTimeout:          getEnvDuration("QF_SHUTDOWN_TIMEOUT", 30*time.Second),
 	}
 

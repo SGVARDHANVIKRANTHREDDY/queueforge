@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"queueforge/internal/config"
 )
 
 type DB struct {

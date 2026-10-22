@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/auth"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"queueforge/internal/auth"
-	"queueforge/internal/postgres"
 )
 
 // auditMiddleware records every successful state-changing control-plane request (cancel, replay,

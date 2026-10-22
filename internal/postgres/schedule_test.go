@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 )
 
 func TestParseNextOccurrence(t *testing.T) {

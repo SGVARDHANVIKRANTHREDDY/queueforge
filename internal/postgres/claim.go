@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
 	"github.com/google/uuid"
-	"queueforge/internal/domain"
 )
 
 // claimBatchSQL leases up to $4 jobs in ONE statement.

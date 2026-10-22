@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"queueforge/internal/auth"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/auth"
 )
 
 // clientRateLimitMiddleware rejects clients that exceed the per-address request budget before any

@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	"queueforge/internal/domain"
-	"queueforge/workerkit"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/workerkit"
 )
 
 // The bundled worker is just workerkit.Run with sample handlers. To run YOUR task types, copy this

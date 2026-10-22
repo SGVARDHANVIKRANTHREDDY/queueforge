@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/migrations"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
-	"queueforge/migrations"
 )
 
 // RunMigrations applies versioned migrations using goose

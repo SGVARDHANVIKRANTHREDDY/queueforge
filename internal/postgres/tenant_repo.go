@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"queueforge/internal/domain"
 )
 
 type TenantRepo struct {

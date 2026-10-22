@@ -1,4 +1,4 @@
-module queueforge/bench/headtohead
+module github.com/SGVARDHANVIKRANTHREDDY/queueforge/bench/headtohead
 
 go 1.27.0
 

@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/recovery"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/testutil"
 	"github.com/google/uuid"
-	"queueforge/internal/config"
-	"queueforge/internal/domain"
-	"queueforge/internal/postgres"
-	"queueforge/internal/recovery"
-	"queueforge/internal/testutil"
 )
 
 func setupChaosEnv(t *testing.T) (*config.Config, *postgres.DB, *postgres.TenantRepo, *postgres.JobRepo, *postgres.ScheduleRepo, *postgres.WorkerRepo, *domain.Tenant) {

@@ -11,16 +11,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/httpapi"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/recovery"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/scheduler"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/testutil"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/worker"
 	"github.com/google/uuid"
-	"queueforge/internal/config"
-	"queueforge/internal/domain"
-	"queueforge/internal/httpapi"
-	"queueforge/internal/observability"
-	"queueforge/internal/postgres"
-	"queueforge/internal/recovery"
-	"queueforge/internal/scheduler"
-	"queueforge/internal/testutil"
-	"queueforge/internal/worker"
 )
 
 func setupTestEnvironment(t *testing.T) (*config.Config, *postgres.DB, *httpapi.API, *postgres.TenantRepo, *postgres.JobRepo, *postgres.ScheduleRepo, *postgres.WorkerRepo) {

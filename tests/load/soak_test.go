@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/testutil"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/worker"
 	"github.com/google/uuid"
-	"queueforge/internal/config"
-	"queueforge/internal/domain"
-	"queueforge/internal/postgres"
-	"queueforge/internal/testutil"
-	"queueforge/internal/worker"
 )
 
 // TestSoak runs a steady workload for QF_SOAK_SECONDS (opt-in) and checks that nothing drifts:

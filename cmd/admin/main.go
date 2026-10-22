@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/google/uuid"
-	"queueforge/internal/config"
-	"queueforge/internal/postgres"
 )
 
 // operator identifies who is running the CLI, for the audit log.

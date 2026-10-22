@@ -15,13 +15,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/auth"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/httpapi"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/testutil"
 	"github.com/google/uuid"
-	"queueforge/internal/auth"
-	"queueforge/internal/config"
-	"queueforge/internal/httpapi"
-	"queueforge/internal/observability"
-	"queueforge/internal/postgres"
-	"queueforge/internal/testutil"
 )
 
 type rig struct {

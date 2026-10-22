@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
 )
 
 func TestPermanentError(t *testing.T) {

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/google/uuid"
-	"queueforge/internal/domain"
-	"queueforge/internal/postgres"
 )
 
 func (e *env) bulkTerminal(t *testing.T, tn *domain.Tenant, n int, age string) {

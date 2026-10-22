@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/google/uuid"
-	"queueforge/internal/domain"
-	"queueforge/internal/postgres"
 )
 
 // batchCompleter implements "group commit" for successful jobs: finished jobs queue up and are

@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/robfig/cron/v3"
-	"queueforge/internal/domain"
 )
 
 type ScheduleRepo struct {

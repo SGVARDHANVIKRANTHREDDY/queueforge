@@ -19,11 +19,11 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"queueforge/internal/domain"
-	"queueforge/internal/postgres"
 )
 
 // Errors returned by EnqueueTx (compare with errors.Is).
@@ -36,23 +36,23 @@ var (
 // Params describes the job. TenantID and TaskType are required; everything else has a default.
 type Params struct {
 	// TenantID: required.
-	TenantID       uuid.UUID
+	TenantID uuid.UUID
 	// TaskType: required.
-	TaskType       string
+	TaskType string
 	// Payload: default {}.
-	Payload        json.RawMessage
+	Payload json.RawMessage
 	// Queue: default "default".
-	Queue          string
+	Queue string
 	// Priority: 0-9, default 5 unless PriorityIsSet.
-	Priority       int16
+	Priority int16
 	// PriorityIsSet: set true to use priority 0.
-	PriorityIsSet  bool
+	PriorityIsSet bool
 	// MaxAttempts: default 5.
-	MaxAttempts    int
+	MaxAttempts int
 	// TimeoutSeconds: default 300.
 	TimeoutSeconds int
 	// RunAt: zero means as soon as possible.
-	RunAt          time.Time
+	RunAt time.Time
 	// IdempotencyKey: optional; same key and same body returns the original job.
 	IdempotencyKey string
 	// IdempotencyTTL: default 24h.

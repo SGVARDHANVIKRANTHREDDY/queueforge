@@ -6,10 +6,10 @@ import (
 	"errors"
 	"testing"
 
-	"queueforge/internal/config"
-	"queueforge/internal/domain"
-	"queueforge/internal/postgres"
-	"queueforge/internal/testutil"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/testutil"
 )
 
 func txRig(t *testing.T) (context.Context, *postgres.DB, *postgres.JobRepo, *domain.Tenant) {

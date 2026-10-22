@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 	"github.com/google/uuid"
-	"queueforge/internal/config"
-	"queueforge/internal/postgres"
 )
 
 // IsolatedDatabase creates a brand-new, fully migrated database for ONE test (or one test

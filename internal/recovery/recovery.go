@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"time"
 
-	"queueforge/internal/config"
-	"queueforge/internal/domain"
-	"queueforge/internal/observability"
-	"queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
 )
 
 type RecoveryLoop struct {

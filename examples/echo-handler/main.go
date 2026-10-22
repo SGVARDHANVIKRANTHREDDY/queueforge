@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"queueforge/internal/config"
-	"queueforge/internal/domain"
-	"queueforge/internal/observability"
-	"queueforge/internal/postgres"
-	"queueforge/internal/worker"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/worker"
 )
 
 // EchoPayload represents the input payload for the echo handler.

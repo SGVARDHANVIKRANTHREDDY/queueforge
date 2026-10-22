@@ -30,15 +30,15 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/config"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/domain"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/observability"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/postgres"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/recovery"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/retention"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/scheduler"
+	"github.com/SGVARDHANVIKRANTHREDDY/queueforge/internal/worker"
 	"github.com/prometheus/client_golang/prometheus"
-	"queueforge/internal/config"
-	"queueforge/internal/domain"
-	"queueforge/internal/observability"
-	"queueforge/internal/postgres"
-	"queueforge/internal/recovery"
-	"queueforge/internal/retention"
-	"queueforge/internal/scheduler"
-	"queueforge/internal/worker"
 )
 
 // Handler processes one job. Return the (optional) JSON result, or an error to fail the attempt.

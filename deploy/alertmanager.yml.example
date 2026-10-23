@@ -1,0 +1,33 @@
+# Copy to deploy/alertmanager.yml and fill in ONE receiver. Never commit real credentials:
+# deploy/alertmanager.yml should be in .gitignore (the .example file is the one to commit).
+#
+# Check it with:  docker run --rm -v ./deploy/alertmanager.yml:/a.yml --entrypoint amtool prom/alertmanager:v0.27.0 check-config /a.yml
+# Send a test alert once it runs:
+#   docker compose -f deploy/docker-compose.prod.yml -f deploy/docker-compose.monitoring.yml exec alertmanager \
+#     amtool --alertmanager.url=http://localhost:9093 alert add TestAlert severity=page --annotation=summary="test alert"
+route:
+  receiver: default
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: ['severity="page"']
+      receiver: default
+      repeat_interval: 1h
+
+receivers:
+  - name: default
+    # Option 1: email (use an app password, not your account password)
+    email_configs:
+      - to: you@example.com
+        from: alerts@example.com
+        smarthost: smtp.example.com:587
+        auth_username: alerts@example.com
+        auth_password: CHANGE_ME
+        send_resolved: true
+    # Option 2: Telegram bot (create one with @BotFather, then message it once to get the chat id)
+    # telegram_configs:
+    #   - bot_token: CHANGE_ME
+    #     chat_id: 123456789
+    #     send_resolved: true

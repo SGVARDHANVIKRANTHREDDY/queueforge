@@ -1,5 +1,17 @@
 global:
   scrape_interval: 15s
+  evaluation_interval: 15s
+
+# The rule files and Alertmanager below are mounted/started by docker-compose.monitoring.yml
+# (use it together with docker-compose.prod.yml). Without that override these entries are inert.
+rule_files:
+  - /etc/prometheus/alerts.yml
+  - /etc/prometheus/alerts-host.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
 
 scrape_configs:
   - job_name: queueforge-api
@@ -12,3 +24,8 @@ scrape_configs:
       - names: ["worker"]
         type: A
         port: 9090
+
+  # Host metrics (disk, memory, CPU) for the disk alerts.
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]

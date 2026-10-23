@@ -1,0 +1,31 @@
+# Monitoring add-on: loads the alert rules into Prometheus and adds node-exporter (host disk metrics)
+# and Alertmanager (delivers alerts). Use it TOGETHER with the production compose file:
+#
+#   docker compose -f deploy/docker-compose.prod.yml -f deploy/docker-compose.monitoring.yml \
+#     --env-file deploy/.env.prod up -d
+#
+# Before the first start:  cp deploy/alertmanager.yml.example deploy/alertmanager.yml  and edit the receiver.
+# Linux hosts only: node-exporter needs to see the host's root filesystem (on Docker Desktop it would
+# report the VM's disk, not your machine's).
+services:
+  prometheus:
+    volumes:
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./alerts-host.yml:/etc/prometheus/alerts-host.yml:ro
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    command: ["--path.rootfs=/host"]
+    volumes:
+      - /:/host:ro,rslave
+    networks: [internal]
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    restart: unless-stopped
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml"]
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports: ["127.0.0.1:9093:9093"] # loopback only: reach it with an SSH tunnel
+    networks: [internal]

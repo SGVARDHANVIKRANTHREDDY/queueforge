@@ -1597,3 +1597,41 @@ injection/revert table, nightly seven-day soak, v0.1.1 upgrade/rollback,
 failed-migration production drill, kind cluster deployment, and documentation
 relocation of private interview material. The user-deferred tests and scripts
 listed at the start of this section are also intentionally excluded.
+
+### Additions validation update
+
+The additions supplied through `PLACEMENT.md` were installed and validated
+after the preceding milestone entry.
+
+The replacement PostgreSQL outage test was run five times with
+`QF_CHAOS_PG_STOP='docker stop qf-race-pg'` and
+`QF_CHAOS_PG_START='docker start qf-race-pg'`. All five runs passed both
+scenarios under `-race`:
+
+    run 1: PASS; short jobs_rerun=0, long jobs_rerun=16
+    run 2: PASS; short jobs_rerun=16, long jobs_rerun=16
+    run 3: PASS; short jobs_rerun=3, long jobs_rerun=16
+    run 4: PASS; short jobs_rerun=9, long jobs_rerun=16
+    run 5: PASS; short jobs_rerun=7, long jobs_rerun=16
+
+Every scenario ended with `dead=0`, `busy_slots=0`,
+`unfinished_attempts=0`, `outstanding=0`, `double_success=0`, and
+`not_exactly_one_success=0`. Outages lasted approximately 8.3-8.5 seconds;
+recovery-to-all-done times were approximately 11.5-13.7 seconds.
+
+The mass-crash script was not executed destructively because no dedicated
+production-style stack, tenant, API key, or disposable worker fleet was
+available. Its refusal gate was executed with dummy values and
+`CONFIRM=no`; it returned exit code 2 with:
+
+    Refusing to run: this kills every worker container. Re-run with CONFIRM=yes on a disposable stack.
+
+The final hosted CI run checked was
+[39841128902](https://github.com/SGVARDHANVIKRANTHREDDY/queueforge/actions/runs/39841128902),
+which completed with `failure`. The PostgreSQL integration, coverage, and
+race integration steps passed; the
+`Chaos tests (real kill -9 of a worker process, network faults via
+fault-injecting proxy)` step failed. The available job log contains
+PostgreSQL cleanup/startup errors including `relation "goose_db_version" does
+not exist` and `role "root" does not exist`, followed by connection
+termination messages. No new hosted green run was claimed.

@@ -15,6 +15,7 @@ bin/
 .env
 .env.*
 !.env.example
+deploy/alertmanager.yml
 
 # IDE and OS files
 .vscode/

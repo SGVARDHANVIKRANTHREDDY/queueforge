@@ -1,0 +1,64 @@
+# Host-level alert rules (disk). They need node-exporter, which docker-compose.monitoring.yml adds.
+# Validate with:  promtool check rules deploy/alerts-host.yml
+#
+# Why disk deserves its own alerts: QueueForge stores every job, attempt and audit row in PostgreSQL.
+# At a sustained 150 jobs/s the jobs table alone grew about 5 MB per minute in the 30-minute soak
+# (roughly 7 GB/day before retention deletes anything), and a full disk makes PostgreSQL stop.
+#
+# Thresholds are starting points; tune them to your disk size. Only the root filesystem is watched
+# (that is where Docker volumes live on a default VPS); add a rule per extra data mount.
+groups:
+  - name: queueforge.host
+    rules:
+      - alert: HostDiskSpaceLow
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs|ramfs"}
+            / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs|ramfs"}) < 0.15
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Root disk on {{ $labels.instance }} has {{ $value | humanizePercentage }} free"
+          runbook: docs/runbooks/runbook-f.md
+
+      - alert: HostDiskSpaceCritical
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs|ramfs"}
+            / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs|ramfs"}) < 0.08
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: "Root disk on {{ $labels.instance }} is almost full ({{ $value | humanizePercentage }} free): PostgreSQL will stop when it fills"
+          runbook: docs/runbooks/runbook-f.md
+
+      # Fires BEFORE the percentage alerts when growth is fast: projected to hit zero within 6 hours
+      # (extrapolating the last 2 hours), while less than 40% is free so a nearly empty big disk stays quiet.
+      - alert: HostDiskFillingFast
+        expr: |
+          predict_linear(node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs|ramfs"}[2h], 6 * 3600) < 0
+          and
+          (node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs|ramfs"}
+            / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs|ramfs"}) < 0.4
+        for: 30m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Root disk on {{ $labels.instance }} is on course to fill within 6 hours"
+          runbook: docs/runbooks/runbook-f.md
+
+      - alert: HostDiskInodesLow
+        expr: |
+          (node_filesystem_files_free{mountpoint="/",fstype!~"tmpfs|overlay|squashfs|ramfs"}
+            / node_filesystem_files{mountpoint="/",fstype!~"tmpfs|overlay|squashfs|ramfs"}) < 0.10
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Root disk on {{ $labels.instance }} has under 10% of inodes free"
+          runbook: docs/runbooks/runbook-f.md
+
+      # A disk alert that cannot fire is worse than none: tell someone if the data disappears.
+      - alert: HostDiskMetricsMissing
+        expr: absent(node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs|ramfs"})
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "No root-disk metrics from node-exporter: the disk alerts cannot fire"
+          runbook: docs/runbooks/runbook-f.md

@@ -4,7 +4,6 @@ package chaos_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -201,7 +200,7 @@ func runPostgresOutage(t *testing.T, stopCmd, startCmd string, sc outageScenario
 		t.Fatalf("%d jobs went dead because of an infrastructure outage (they should have been retried)", dead)
 	}
 	if busy != 0 || outstanding != 0 || unfinished != 0 {
-		t.Fatal(fmt.Sprintf("leak after outage: busy_slots=%d outstanding=%d unfinished_attempts=%d", busy, outstanding, unfinished))
+		t.Fatalf("leak after outage: busy_slots=%d outstanding=%d unfinished_attempts=%d", busy, outstanding, unfinished)
 	}
 	if doubleSuccess != 0 || notExactlyOne != 0 {
 		t.Fatalf("completion integrity violated: jobs with >1 succeeded attempt=%d, succeeded jobs without exactly one succeeded attempt=%d", doubleSuccess, notExactlyOne)

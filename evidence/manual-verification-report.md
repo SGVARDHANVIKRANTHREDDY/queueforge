@@ -1635,3 +1635,133 @@ fault-injecting proxy)` step failed. The available job log contains
 PostgreSQL cleanup/startup errors including `relation "goose_db_version" does
 not exist` and `role "root" does not exist`, followed by connection
 termination messages. No new hosted green run was claimed.
+
+## 2026-10-23 complete-plan rerun
+
+The milestone plan was reread from line 1 and every locally executable
+command or safe prerequisite check was attempted. Commands requiring a real
+VPS, a second host, public DNS/TLS, external users, an outside reviewer,
+multi-week uptime, or credentials unavailable in this workspace remain
+blocked and are not represented as passes.
+
+### Local and container command outputs
+
+    git push origin main
+    Everything up-to-date
+
+    go test ./...
+    PASS (all packages)
+
+    go vet ./...
+    PASS
+
+    gofmt -l .
+    PASS (no output)
+
+    docker compose -f deploy/docker-compose.yml config
+    PASS
+
+    docker compose -f deploy/docker-compose.prod.yml config
+    FAIL: required variables DOMAIN and POSTGRES_PASSWORD were missing.
+    The command was retried with both variables supplied and configuration
+    rendered successfully.
+
+    go test -race -count=1 ./internal/...
+    FAIL: go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
+    The Linux race suite was used instead.
+
+    QF_PROP_SEEDS=200 go test -count=1 ./tests/property
+    PASS (587.062s)
+
+    go test -coverprofile=c.out ./... && go tool cover -func=c.out
+    PASS; the total line was captured by the corrected cmd.exe invocation.
+    The earlier PowerShell invocation misparsed the output filename and is
+    retained as a command-shell compatibility failure.
+
+    go test -count=1 -run NetworkFaults ./tests/chaos
+    PASS with no tests selected (the test is guarded by its database setup).
+
+The strict Linux network-fault command was run five times alone against the
+disposable PostgreSQL container with `QF_CHAOS_STRICT=1`:
+
+    run 1: wasted_executions=16, FAIL (strict limit)
+    run 2: wasted_executions=16, FAIL (strict limit)
+    run 3: wasted_executions=16, FAIL (strict limit)
+    run 4: wasted_executions=13, FAIL (strict limit)
+    run 5: wasted_executions=16, FAIL (strict limit)
+
+All five nevertheless ended with `dead=0`, `busy_slots=0`, and
+`outstanding=0`. The measured median was 16 and the maximum was 16, so the
+plan's strict `<=10` criterion is not met.
+
+The replacement outage test had already completed five successful runs in the
+same disposable environment; those results are recorded in the preceding
+additions section. The ten-run Linux `-race` loop completed all ten runs
+without a reported test failure. The Windows race command remains blocked by
+CGO.
+
+The release image built successfully as
+`ghcr.io/sgvardhanvikranthreddy/queueforge:v0.1.0`. The exact anonymous pull
+command returned:
+
+    error from registry: denied
+    denied
+
+The clean-room module commands for `workerkit`, `outbox`, and the Go SDK
+resolved `v0.1.0`; the generated demo then built successfully. The clean
+Python SDK venv installed `pip`, `setuptools`, and `requests`; `setup.py
+check` and all 8 SDK unit tests passed. `govulncheck ./...` reported:
+
+    No vulnerabilities found.
+
+Gitleaks was run in a container against the repository and reported:
+
+    31 commits scanned.
+    no leaks found
+
+The Trivy image command was attempted twice. Both attempts failed while
+downloading the vulnerability database from the configured mirror, before an
+image result was produced. Therefore no current Trivy pass is claimed.
+
+The bounded soak command (`QF_SOAK_SECONDS=60`, `QF_SOAK_RATE=10`) failed to
+connect because the local PostgreSQL password did not match. The exact
+15-minute/production-style soak, backup, restore, smoke, and least-privilege
+flows could not start because no configured production stack or
+`deploy/.env.prod` credentials were present. `deploy/smoke.sh` returned HTTP
+000 for every check against `localhost:8080`; `deploy/backup.sh` failed to
+create `/var/backups/queueforge`; and `restore-drill.sh` found no backup.
+
+The latest hosted CI run was
+[39920674200](https://github.com/SGVARDHANVIKRANTHREDDY/queueforge/actions/runs/39920674200).
+It failed in the security job on
+`tests/chaos/pg_outage_test.go:204` (`t.Fatal(fmt.Sprintf(...))`) and failed
+the PostgreSQL chaos step with repeated `goose_db_version` cleanup errors,
+`role "root" does not exist`, and terminated connections. The staticcheck
+finding was fixed locally after retrieving the log; a new hosted run was not
+yet available during this rerun.
+
+The following plan items were attempted and explicitly blocked by missing
+external prerequisites: anonymous GHCR publication, GitHub Release creation,
+real VPS deployment and 21-day operations log, external monitor and canary,
+off-machine backup, real-user canary, second-host PostgreSQL/TLS, public
+TLS/ZAP, outside engineer review, mutation injection/revert evidence, seven
+nightly green runs, v0.1.1 upgrade/rollback, failed-migration production
+drill, and kind/Kubernetes deployment (`kind` is not installed). Destructive
+worker-kill, VPS reboot, disk-fill, and mass-crash actions were not run
+against the shared local environment.
+
+The corrected PostgreSQL matrix passed all requested suites:
+
+    PostgreSQL 15: integration PASS, property PASS, regression PASS
+    PostgreSQL 16: integration PASS, property PASS, regression PASS
+    PostgreSQL 17: integration PASS, property PASS, regression PASS
+
+The exact whole-repository coverage command reported:
+
+    total: (statements) 11.3%
+
+The ten Linux race repetitions each completed with all packages passing.
+The Windows `staticcheck ./...` command was also attempted after installing
+Staticcheck; it reported unused Windows-excluded chaos helper symbols
+(`faultProxy`, `privateDatabase`, and `buildWorkerBinary`), while the hosted
+Linux Staticcheck finding in `pg_outage_test.go` was fixed with `t.Fatalf`.

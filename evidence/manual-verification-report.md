@@ -1765,3 +1765,55 @@ The Windows `staticcheck ./...` command was also attempted after installing
 Staticcheck; it reported unused Windows-excluded chaos helper symbols
 (`faultProxy`, `privateDatabase`, and `buildWorkerBinary`), while the hosted
 Linux Staticcheck finding in `pg_outage_test.go` was fixed with `t.Fatalf`.
+
+## Audit corrections and latest hosted CI evidence
+
+The audit correctly identified that the strict network-fault guard is an
+optimization threshold, not a correctness invariant. The ten recorded
+values are `16, 15, 4, 15, 3, 16, 16, 16, 13, 16`; the median is `16`.
+The latest hosted failure confirms the exact cause:
+
+    --- FAIL: TestChaos_NetworkFaultsBetweenWorkersAndPostgres (20.55s)
+        netfault_test.go:154: wasted executions 14 exceeds the limit 10
+        (set QF_CHAOS_STRICT=1 and run alone for the strict guard)
+    CHAOS_RESULT netfault total_jobs=240 executions=254 wasted_executions=14
+    dead=0 busy_slots=0 outstanding=0
+
+No threshold change was made because raising or replacing the strict guard
+requires an explicit product decision about the accepted at-least-once
+duplication bound.
+
+The latest hosted run was
+[39942447625](https://github.com/SGVARDHANVIKRANTHREDDY/queueforge/actions/runs/39942447625).
+Its job results were: Unit Tests PASS, PostgreSQL Integration & Chaos Tests
+FAIL only at the strict network-fault guard, Prometheus alert rules PASS,
+Lint/Format/Vet PASS, Python SDK PASS, Security Scan PASS, and Build
+Binaries/Docker Image PASS. The local `pg_outage_test.go` fix is already
+present on `main` at commit `5f5bd13`; `git push origin main` returned
+`Everything up-to-date`.
+
+The prior statement that Gitleaks found "no leaks" was too broad. The
+repository contains 15 historical findings represented in `.gitleaksignore`.
+They were reviewed as documentation/test fixtures and suppressed with
+fingerprint comments. The accurate claim is: `15 historical findings
+reviewed and suppressed; the current scan found no additional unsuppressed
+leaks.` This is not equivalent to proving the historical values are all
+fake without an unredacted review.
+
+The previous `middleware.RealIP` and unused security-test findings are stale
+for the current tree: `internal/httpapi/api.go` now uses the guarded local
+`trustedRemoteIP` middleware, and the unused security-test value was removed.
+The current Windows Staticcheck output instead reports unused helpers in
+Windows-excluded chaos support code. That output is retained above.
+
+The requested cross-package coverage command using
+`-coverpkg=./internal/...,./sdk/...` was not rerun after the audit because
+Docker became unavailable while the database-backed test environment was
+being recreated. The earlier 11.3% value is package-local coverage and
+should not be compared with the documented cross-package figure.
+
+Verbose per-test output for the newly installed panic/lifecycle tests was
+also blocked in the final rerun when Docker Desktop's Linux engine stopped
+responding. Earlier focused Linux `-race` execution passed the real-worker
+panic test and all six lifecycle tests; those results remain valid but are
+not a substitute for a newly captured verbose log.

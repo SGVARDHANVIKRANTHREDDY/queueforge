@@ -1817,3 +1817,17 @@ also blocked in the final rerun when Docker Desktop's Linux engine stopped
 responding. Earlier focused Linux `-race` execution passed the real-worker
 panic test and all six lifecycle tests; those results remain valid but are
 not a substitute for a newly captured verbose log.
+
+## Network-fault bound decision
+
+The strict network-fault policy was changed after the audit review. The
+`QF_CHAOS_STRICT=1` CI mode remains enabled, but the wasted-execution limit is
+now derived from the test's configured tenant concurrency: 16 concurrent jobs
+plus a margin of 4, for a hard bound of 20. This documents the
+at-least-once duplicate-work bound for a partition longer than the lease.
+The earlier `3-7` figure was a best case; the 11 recorded runs ranged from 3
+to 16.
+
+The result line always prints `wasted_executions`. The following remain hard
+failures regardless of that bound: `dead`, `busy_slots`, `outstanding`,
+`unfinished_attempts`, `double_success`, and `not_exactly_one_success`.

@@ -59,5 +59,5 @@ Drain 16 to ~830 jobs/s; idle pickup 222 to ~9 ms; claim latency flat from 0 to 
 
 ## 9. FAQ
 **Why not exactly-once?** Because a handler's side effect and its commit cannot be made atomic. What *is* guaranteed: a job completes at most once in the database (fencing) and runs at least once.
-**What happens if the database restarts mid-job?** Workers retry the commit with backoff while the lease renewer runs; if the outage outlasts the lease, the job is recovered and retried. Tested with a 10-second outage.
+**What happens if the database restarts mid-job?** Workers retry the commit with backoff while the lease renewer runs; if the outage outlasts the lease, the job is recovered and retried. This is at-least-once execution: a partition longer than the lease can duplicate work, bounded in the network-fault test by the tenant's maximum concurrency plus a small margin (16 + 4 = 20). The earlier 3-7 wasted-execution result was a best case; 11 runs ranged from 3 to 16.
 **What would you do with two more weeks?** Deploy it with real users first (nothing teaches more), then batch completion, then a separate-hardware scaling curve.

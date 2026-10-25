@@ -1,0 +1,69 @@
+QueueForge kind Kubernetes validation
+Date: 2026-10-26
+Cluster: queueforge-k8s
+Node image: kindest/node:v1.37.0
+
+Environment:
+  Docker Desktop 29.7.2
+  kind v0.33.0
+  kubectl v1.36.1
+
+Cluster creation:
+  kind create cluster --name queueforge-k8s
+  PASS: control plane created and became Ready.
+
+Image loading:
+  kind load docker-image deploy-api:latest --name queueforge-k8s
+  kind load docker-image deploy-worker:latest --name queueforge-k8s
+  PASS: both images loaded.
+
+Temporary overlay apply:
+  kubectl apply -f <temporary-overlay>
+  PASS: namespace, ConfigMap, Secret, API/worker Deployments, API Service,
+  PDBs, HPA, NetworkPolicy, PostgreSQL Deployment, and PostgreSQL Service created.
+
+Initial workload result:
+  queueforge-postgres: 1/1 Running
+  queueforge-api: ImagePullBackOff
+  queueforge-worker: ImagePullBackOff
+  Cause: the production-shaped manifest uses imagePullPolicy=Always, so local
+  kind attempted to pull deploy-api:latest and deploy-worker:latest from Docker Hub.
+
+Local overlay corrections:
+  Worker image changed to deploy-worker:latest.
+  imagePullPolicy changed to IfNotPresent.
+  runAsNonRoot changed to false for the local overlay because the images use
+  the symbolic user qf; kind/containerd rejected the production setting with:
+  "container has runAsNonRoot and image has non-numeric user (qf), cannot
+  verify user is non-root".
+  Secret database URLs changed to:
+  postgres://postgres:postgrespassword@queueforge-postgres:5432/queueforge?sslmode=disable
+
+Readiness result after corrections:
+  PostgreSQL: Ready.
+  API: CrashLoopBackOff; startup logged "applying database migrations..." and
+  did not reach /healthz or /readyz.
+  Worker: CrashLoopBackOff/Running but not Ready; probes could not connect to
+  :9090.
+  The API rollout and worker rollout both exceeded their progress deadlines.
+  The API migration startup behavior could not be made Ready in this disposable
+  overlay without changing application/manifest behavior.
+
+Pod-kill resilience:
+  NOT RUN. No API or worker pod reached Ready, so a meaningful pod-kill
+  recovery assertion was not possible.
+
+Node drain:
+  kubectl drain queueforge-k8s-control-plane --ignore-daemonsets
+    --delete-emptydir-data --force --timeout=60s
+  RESULT: exit code 1.
+  The only node was cordoned. PostgreSQL and system pods were evicted, but
+  API and worker evictions repeatedly failed because their PDBs would be
+  violated. This is a single-node limitation, not a successful production
+  drain test.
+
+Cleanup:
+  kind delete cluster --name queueforge-k8s
+  PASS: cluster deleted and no queueforge-k8s control-plane container remained.
+
+Verdict: FAIL (validation evidence, not a product pass).

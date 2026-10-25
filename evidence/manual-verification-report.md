@@ -2060,3 +2060,50 @@ reported 16 reruns every time. The complete verbose output is preserved in
 [postgres-outage-20261025-five-runs.txt](./postgres-outage-20261025-five-runs.txt).
 
 The upgrade/rollback drill was intentionally skipped per request.
+## kind Kubernetes validation (2026-10-26)
+
+The Kubernetes validation was run in a disposable `kind` cluster named
+`queueforge-k8s` using Docker Desktop. The complete command output is retained
+in [kind-kubernetes-20261026.txt](./kind-kubernetes-20261026.txt).
+
+Environment:
+
+- Docker Desktop 29.7.2
+- kind v0.33.0
+- kubectl v1.36.1
+- kindest/node:v1.37.0
+
+Cluster creation, image loading, and application of a temporary local
+PostgreSQL overlay succeeded. PostgreSQL reached `1/1 Running`. The first
+API and worker rollout failed with `ImagePullBackOff` because the
+production-shaped manifest uses `imagePullPolicy: Always` for local image
+names. The local overlay changed this to `IfNotPresent` and corrected the
+worker image.
+
+The next blocker was Kubernetes rejecting the image's symbolic `qf` user under
+the manifest's `runAsNonRoot: true` setting:
+
+```text
+container has runAsNonRoot and image has non-numeric user (qf), cannot verify user is non-root
+```
+
+For this disposable validation overlay only, `runAsNonRoot` was set to
+`false`. Database URLs were also pointed at the temporary PostgreSQL service.
+The API still remained in `CrashLoopBackOff` after logging
+`applying database migrations...`; the worker did not become Ready because its
+health probe could not connect. Both deployment rollouts exceeded their
+progress deadlines. No repository manifest was changed.
+
+The pod-kill resilience test was not run because no API or worker pod became
+Ready. A single-node drain was attempted with
+`kubectl drain queueforge-k8s-control-plane --ignore-daemonsets
+--delete-emptydir-data --force --timeout=60s`; it exited with code 1. The node
+was cordoned and some system/PostgreSQL pods were evicted, but API and worker
+evictions repeatedly failed because the PDBs would be violated. This is a
+single-node kind limitation and is not evidence of a successful production
+drain.
+
+The disposable cluster was deleted successfully. **Kubernetes validation
+verdict: FAIL / not production-ready evidence.** The blockers are preserved
+verbatim in the evidence file; this run must not be reported as a Kubernetes
+pass.

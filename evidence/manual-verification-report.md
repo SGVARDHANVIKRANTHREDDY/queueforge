@@ -2033,3 +2033,30 @@ failure/recovery slot (M7), stale failure fencing (M8), a cross-tenant HTTP
 200 (M9), leaked hostname information (M10), 40 wrong keys never throttled
 (M11), `last_used_at` advancing within one minute (M12), and zero audit
 entries where one was required (M13).
+
+## Hosted CI and PostgreSQL outage rerun
+
+The three required consecutive main-branch hosted runs are green:
+
+    5516d6a  success  run 40173597933
+    65e2770  success  run 40192177646
+    7e24822  success  run 40217837656
+
+The PostgreSQL outage test was then run five times with configured stop/start
+commands using Docker's local API from a Linux test container. Every run
+passed both the short commit-retry scenario and the long lease-recovery
+scenario:
+
+    run 1: short reruns=14, long reruns=16, duration=71.90s
+    run 2: short reruns=14, long reruns=16, duration=61.54s
+    run 3: short reruns=10, long reruns=16, duration=55.59s
+    run 4: short reruns=14, long reruns=16, duration=60.03s
+    run 5: short reruns=11, long reruns=16, duration=57.15s
+
+All ten scenarios reported `dead=0`, `busy_slots=0`,
+`unfinished_attempts=0`, `outstanding=0`, `double_success=0`, and
+`not_exactly_one_success=0`. The long scenario required retries and
+reported 16 reruns every time. The complete verbose output is preserved in
+[postgres-outage-20261025-five-runs.txt](./postgres-outage-20261025-five-runs.txt).
+
+The upgrade/rollback drill was intentionally skipped per request.

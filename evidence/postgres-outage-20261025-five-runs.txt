@@ -1,0 +1,275 @@
+=== OUTAGE_RUN_1 ===
+go: downloading github.com/google/uuid v1.6.0
+go: downloading github.com/jackc/pgx/v5 v5.11.0
+go: downloading github.com/prometheus/client_golang v1.25.0
+go: downloading github.com/robfig/cron/v3 v3.0.1
+go: downloading github.com/pressly/goose/v3 v3.29.0
+go: downloading golang.org/x/sync v0.24.0
+go: downloading github.com/mfridman/interpolate v0.0.2
+go: downloading github.com/sethvargo/go-retry v0.5.0
+go: downloading go.uber.org/multierr v1.11.0
+go: downloading github.com/cespare/xxhash/v2 v2.3.0
+go: downloading github.com/beorn7/perks v1.0.1
+go: downloading github.com/prometheus/common v0.72.0
+go: downloading google.golang.org/protobuf v1.36.12
+go: downloading github.com/prometheus/procfs v0.22.0
+go: downloading github.com/prometheus/client_model v0.6.3
+go: downloading github.com/jackc/puddle/v2 v2.2.3
+go: downloading golang.org/x/text v0.43.0
+go: downloading github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761
+go: downloading github.com/jackc/pgpassfile v1.0.0
+go: downloading golang.org/x/sys v0.49.0
+go: downloading github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
+=== RUN   TestChaos_PostgresOutageMidWorkload
+=== RUN   TestChaos_PostgresOutageMidWorkload/short_outage_is_absorbed_by_commit_retry
+2026/10/25 17:52:49 OK   00001_initial_schema.sql (248.87ms)
+2026/10/25 17:52:49 OK   00002_autovacuum_tuning.sql (6.73ms)
+2026/10/25 17:52:49 OK   00003_audit_log.sql (31.73ms)
+2026/10/25 17:52:49 OK   00004_job_trace_id.sql (3.71ms)
+2026/10/25 17:52:49 OK   00005_claim_probe_index.sql (21.44ms)
+2026/10/25 17:52:49 OK   00006_terminal_retention_index.sql (16.43ms)
+2026/10/25 17:52:49 goose: successfully migrated database to version: 6
+    pg_outage_test.go:61: scenario commit_budget=60s: stopping Postgres with 48/400 jobs done
+    pg_outage_test.go:61: CHAOS_RESULT outage_seconds=8.6
+    pg_outage_test.go:61: CHAOS_RESULT done_shortly_after_db_returned=48/400
+    pg_outage_test.go:61: CHAOS_RESULT recovery_to_all_done_seconds=12.7
+    pg_outage_test.go:61: CHAOS_RESULT scenario_commit_budget=60s jobs_rerun=14 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 double_success=0 not_exactly_one_success=0
+=== RUN   TestChaos_PostgresOutageMidWorkload/long_outage_exhausts_commit_budget_and_lease_recovery_takes_over
+2026/10/25 17:53:28 OK   00001_initial_schema.sql (211.13ms)
+2026/10/25 17:53:28 OK   00002_autovacuum_tuning.sql (6.2ms)
+2026/10/25 17:53:28 OK   00003_audit_log.sql (24.08ms)
+2026/10/25 17:53:28 OK   00004_job_trace_id.sql (3.63ms)
+2026/10/25 17:53:28 OK   00005_claim_probe_index.sql (16.42ms)
+2026/10/25 17:53:28 OK   00006_terminal_retention_index.sql (8.95ms)
+2026/10/25 17:53:28 goose: successfully migrated database to version: 6
+    pg_outage_test.go:64: scenario commit_budget=2s: stopping Postgres with 48/400 jobs done
+    pg_outage_test.go:64: CHAOS_RESULT outage_seconds=8.5
+    pg_outage_test.go:64: CHAOS_RESULT done_shortly_after_db_returned=48/400
+    pg_outage_test.go:64: CHAOS_RESULT recovery_to_all_done_seconds=12.0
+    pg_outage_test.go:64: CHAOS_RESULT scenario_commit_budget=2s jobs_rerun=16 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 double_success=0 not_exactly_one_success=0
+--- PASS: TestChaos_PostgresOutageMidWorkload (71.90s)
+    --- PASS: TestChaos_PostgresOutageMidWorkload/short_outage_is_absorbed_by_commit_retry (38.53s)
+    --- PASS: TestChaos_PostgresOutageMidWorkload/long_outage_exhausts_commit_budget_and_lease_recovery_takes_over (33.37s)
+PASS
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/chaos	71.927s
+OUTAGE_RUN_1_EXIT=0
+=== OUTAGE_RUN_2 ===
+go: downloading github.com/google/uuid v1.6.0
+go: downloading github.com/prometheus/client_golang v1.25.0
+go: downloading github.com/jackc/pgx/v5 v5.11.0
+go: downloading github.com/pressly/goose/v3 v3.29.0
+go: downloading github.com/robfig/cron/v3 v3.0.1
+go: downloading github.com/mfridman/interpolate v0.0.2
+go: downloading go.uber.org/multierr v1.11.0
+go: downloading github.com/sethvargo/go-retry v0.5.0
+go: downloading golang.org/x/sync v0.24.0
+go: downloading github.com/jackc/puddle/v2 v2.2.3
+go: downloading github.com/jackc/pgpassfile v1.0.0
+go: downloading golang.org/x/text v0.43.0
+go: downloading github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761
+go: downloading github.com/prometheus/client_model v0.6.3
+go: downloading github.com/beorn7/perks v1.0.1
+go: downloading google.golang.org/protobuf v1.36.12
+go: downloading github.com/prometheus/procfs v0.22.0
+go: downloading github.com/prometheus/common v0.72.0
+go: downloading github.com/cespare/xxhash/v2 v2.3.0
+go: downloading github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
+go: downloading golang.org/x/sys v0.49.0
+=== RUN   TestChaos_PostgresOutageMidWorkload
+=== RUN   TestChaos_PostgresOutageMidWorkload/short_outage_is_absorbed_by_commit_retry
+2026/10/25 17:54:47 OK   00001_initial_schema.sql (101.42ms)
+2026/10/25 17:54:47 OK   00002_autovacuum_tuning.sql (3.08ms)
+2026/10/25 17:54:47 OK   00003_audit_log.sql (11.43ms)
+2026/10/25 17:54:47 OK   00004_job_trace_id.sql (1.81ms)
+2026/10/25 17:54:47 OK   00005_claim_probe_index.sql (9.39ms)
+2026/10/25 17:54:47 OK   00006_terminal_retention_index.sql (5.64ms)
+2026/10/25 17:54:47 goose: successfully migrated database to version: 6
+    pg_outage_test.go:61: scenario commit_budget=60s: stopping Postgres with 48/400 jobs done
+    pg_outage_test.go:61: CHAOS_RESULT outage_seconds=8.3
+    pg_outage_test.go:61: CHAOS_RESULT done_shortly_after_db_returned=48/400
+    pg_outage_test.go:61: CHAOS_RESULT recovery_to_all_done_seconds=12.3
+    pg_outage_test.go:61: CHAOS_RESULT scenario_commit_budget=60s jobs_rerun=14 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 double_success=0 not_exactly_one_success=0
+=== RUN   TestChaos_PostgresOutageMidWorkload/long_outage_exhausts_commit_budget_and_lease_recovery_takes_over
+2026/10/25 17:55:19 OK   00001_initial_schema.sql (98.55ms)
+2026/10/25 17:55:19 OK   00002_autovacuum_tuning.sql (3.27ms)
+2026/10/25 17:55:19 OK   00003_audit_log.sql (13.66ms)
+2026/10/25 17:55:19 OK   00004_job_trace_id.sql (2.15ms)
+2026/10/25 17:55:19 OK   00005_claim_probe_index.sql (9.08ms)
+2026/10/25 17:55:19 OK   00006_terminal_retention_index.sql (4.86ms)
+2026/10/25 17:55:19 goose: successfully migrated database to version: 6
+    pg_outage_test.go:64: scenario commit_budget=2s: stopping Postgres with 48/400 jobs done
+    pg_outage_test.go:64: CHAOS_RESULT outage_seconds=8.3
+    pg_outage_test.go:64: CHAOS_RESULT done_shortly_after_db_returned=48/400
+    pg_outage_test.go:64: CHAOS_RESULT recovery_to_all_done_seconds=13.1
+    pg_outage_test.go:64: CHAOS_RESULT scenario_commit_budget=2s jobs_rerun=16 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 double_success=0 not_exactly_one_success=0
+--- PASS: TestChaos_PostgresOutageMidWorkload (61.54s)
+    --- PASS: TestChaos_PostgresOutageMidWorkload/short_outage_is_absorbed_by_commit_retry (31.61s)
+    --- PASS: TestChaos_PostgresOutageMidWorkload/long_outage_exhausts_commit_budget_and_lease_recovery_takes_over (29.93s)
+PASS
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/chaos	61.555s
+OUTAGE_RUN_2_EXIT=0
+=== OUTAGE_RUN_3 ===
+go: downloading github.com/google/uuid v1.6.0
+go: downloading github.com/prometheus/client_golang v1.25.0
+go: downloading github.com/jackc/pgx/v5 v5.11.0
+go: downloading github.com/robfig/cron/v3 v3.0.1
+go: downloading github.com/pressly/goose/v3 v3.29.0
+go: downloading github.com/prometheus/common v0.72.0
+go: downloading github.com/cespare/xxhash/v2 v2.3.0
+go: downloading github.com/beorn7/perks v1.0.1
+go: downloading google.golang.org/protobuf v1.36.12
+go: downloading github.com/sethvargo/go-retry v0.5.0
+go: downloading github.com/prometheus/client_model v0.6.3
+go: downloading github.com/prometheus/procfs v0.22.0
+go: downloading go.uber.org/multierr v1.11.0
+go: downloading github.com/mfridman/interpolate v0.0.2
+go: downloading golang.org/x/sync v0.24.0
+go: downloading github.com/jackc/puddle/v2 v2.2.3
+go: downloading golang.org/x/text v0.43.0
+go: downloading github.com/jackc/pgpassfile v1.0.0
+go: downloading github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761
+go: downloading github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
+go: downloading golang.org/x/sys v0.49.0
+=== RUN   TestChaos_PostgresOutageMidWorkload
+=== RUN   TestChaos_PostgresOutageMidWorkload/short_outage_is_absorbed_by_commit_retry
+2026/10/25 17:56:22 OK   00001_initial_schema.sql (95.35ms)
+2026/10/25 17:56:22 OK   00002_autovacuum_tuning.sql (3.27ms)
+2026/10/25 17:56:22 OK   00003_audit_log.sql (10.84ms)
+2026/10/25 17:56:22 OK   00004_job_trace_id.sql (1.59ms)
+2026/10/25 17:56:22 OK   00005_claim_probe_index.sql (8.62ms)
+2026/10/25 17:56:22 OK   00006_terminal_retention_index.sql (4.81ms)
+2026/10/25 17:56:22 goose: successfully migrated database to version: 6
+    pg_outage_test.go:61: scenario commit_budget=60s: stopping Postgres with 48/400 jobs done
+    pg_outage_test.go:61: CHAOS_RESULT outage_seconds=8.3
+    pg_outage_test.go:61: CHAOS_RESULT done_shortly_after_db_returned=48/400
+    pg_outage_test.go:61: CHAOS_RESULT recovery_to_all_done_seconds=12.0
+    pg_outage_test.go:61: CHAOS_RESULT scenario_commit_budget=60s jobs_rerun=10 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 double_success=0 not_exactly_one_success=0
+=== RUN   TestChaos_PostgresOutageMidWorkload/long_outage_exhausts_commit_budget_and_lease_recovery_takes_over
+2026/10/25 17:56:49 OK   00001_initial_schema.sql (128.22ms)
+2026/10/25 17:56:49 OK   00002_autovacuum_tuning.sql (3.52ms)
+2026/10/25 17:56:49 OK   00003_audit_log.sql (12.6ms)
+2026/10/25 17:56:49 OK   00004_job_trace_id.sql (3.52ms)
+2026/10/25 17:56:49 OK   00005_claim_probe_index.sql (9.19ms)
+2026/10/25 17:56:49 OK   00006_terminal_retention_index.sql (6.59ms)
+2026/10/25 17:56:49 goose: successfully migrated database to version: 6
+    pg_outage_test.go:64: scenario commit_budget=2s: stopping Postgres with 48/400 jobs done
+    pg_outage_test.go:64: CHAOS_RESULT outage_seconds=8.3
+    pg_outage_test.go:64: CHAOS_RESULT done_shortly_after_db_returned=48/400
+    pg_outage_test.go:64: CHAOS_RESULT recovery_to_all_done_seconds=13.6
+    pg_outage_test.go:64: CHAOS_RESULT scenario_commit_budget=2s jobs_rerun=16 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 double_success=0 not_exactly_one_success=0
+--- PASS: TestChaos_PostgresOutageMidWorkload (55.59s)
+    --- PASS: TestChaos_PostgresOutageMidWorkload/short_outage_is_absorbed_by_commit_retry (26.69s)
+    --- PASS: TestChaos_PostgresOutageMidWorkload/long_outage_exhausts_commit_budget_and_lease_recovery_takes_over (28.90s)
+PASS
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/chaos	55.600s
+OUTAGE_RUN_3_EXIT=0
+=== OUTAGE_RUN_4 ===
+go: downloading github.com/google/uuid v1.6.0
+go: downloading github.com/prometheus/client_golang v1.25.0
+go: downloading github.com/jackc/pgx/v5 v5.11.0
+go: downloading github.com/robfig/cron/v3 v3.0.1
+go: downloading github.com/pressly/goose/v3 v3.29.0
+go: downloading github.com/prometheus/client_model v0.6.3
+go: downloading github.com/prometheus/procfs v0.22.0
+go: downloading google.golang.org/protobuf v1.36.12
+go: downloading github.com/cespare/xxhash/v2 v2.3.0
+go: downloading github.com/sethvargo/go-retry v0.5.0
+go: downloading go.uber.org/multierr v1.11.0
+go: downloading github.com/beorn7/perks v1.0.1
+go: downloading github.com/prometheus/common v0.72.0
+go: downloading golang.org/x/sync v0.24.0
+go: downloading github.com/mfridman/interpolate v0.0.2
+go: downloading github.com/jackc/puddle/v2 v2.2.3
+go: downloading golang.org/x/text v0.43.0
+go: downloading github.com/jackc/pgpassfile v1.0.0
+go: downloading github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761
+go: downloading golang.org/x/sys v0.49.0
+go: downloading github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
+=== RUN   TestChaos_PostgresOutageMidWorkload
+=== RUN   TestChaos_PostgresOutageMidWorkload/short_outage_is_absorbed_by_commit_retry
+2026/10/25 17:57:51 OK   00001_initial_schema.sql (93.7ms)
+2026/10/25 17:57:51 OK   00002_autovacuum_tuning.sql (3.27ms)
+2026/10/25 17:57:51 OK   00003_audit_log.sql (11.49ms)
+2026/10/25 17:57:51 OK   00004_job_trace_id.sql (1.51ms)
+2026/10/25 17:57:51 OK   00005_claim_probe_index.sql (8.03ms)
+2026/10/25 17:57:51 OK   00006_terminal_retention_index.sql (5.21ms)
+2026/10/25 17:57:51 goose: successfully migrated database to version: 6
+    pg_outage_test.go:61: scenario commit_budget=60s: stopping Postgres with 48/400 jobs done
+    pg_outage_test.go:61: CHAOS_RESULT outage_seconds=8.3
+    pg_outage_test.go:61: CHAOS_RESULT done_shortly_after_db_returned=48/400
+    pg_outage_test.go:61: CHAOS_RESULT recovery_to_all_done_seconds=12.7
+    pg_outage_test.go:61: CHAOS_RESULT scenario_commit_budget=60s jobs_rerun=14 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 double_success=0 not_exactly_one_success=0
+=== RUN   TestChaos_PostgresOutageMidWorkload/long_outage_exhausts_commit_budget_and_lease_recovery_takes_over
+2026/10/25 17:58:21 OK   00001_initial_schema.sql (93.94ms)
+2026/10/25 17:58:21 OK   00002_autovacuum_tuning.sql (2.98ms)
+2026/10/25 17:58:21 OK   00003_audit_log.sql (10.61ms)
+2026/10/25 17:58:21 OK   00004_job_trace_id.sql (1.74ms)
+2026/10/25 17:58:21 OK   00005_claim_probe_index.sql (7.78ms)
+2026/10/25 17:58:21 OK   00006_terminal_retention_index.sql (4.74ms)
+2026/10/25 17:58:21 goose: successfully migrated database to version: 6
+    pg_outage_test.go:64: scenario commit_budget=2s: stopping Postgres with 48/400 jobs done
+    pg_outage_test.go:64: CHAOS_RESULT outage_seconds=8.3
+    pg_outage_test.go:64: CHAOS_RESULT done_shortly_after_db_returned=48/400
+    pg_outage_test.go:64: CHAOS_RESULT recovery_to_all_done_seconds=12.9
+    pg_outage_test.go:64: CHAOS_RESULT scenario_commit_budget=2s jobs_rerun=16 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 double_success=0 not_exactly_one_success=0
+--- PASS: TestChaos_PostgresOutageMidWorkload (60.03s)
+    --- PASS: TestChaos_PostgresOutageMidWorkload/short_outage_is_absorbed_by_commit_retry (29.62s)
+    --- PASS: TestChaos_PostgresOutageMidWorkload/long_outage_exhausts_commit_budget_and_lease_recovery_takes_over (30.42s)
+PASS
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/chaos	60.057s
+OUTAGE_RUN_4_EXIT=0
+=== OUTAGE_RUN_5 ===
+go: downloading github.com/google/uuid v1.6.0
+go: downloading github.com/prometheus/client_golang v1.25.0
+go: downloading github.com/jackc/pgx/v5 v5.11.0
+go: downloading github.com/robfig/cron/v3 v3.0.1
+go: downloading github.com/pressly/goose/v3 v3.29.0
+go: downloading google.golang.org/protobuf v1.36.12
+go: downloading github.com/prometheus/client_model v0.6.3
+go: downloading github.com/beorn7/perks v1.0.1
+go: downloading github.com/prometheus/common v0.72.0
+go: downloading github.com/cespare/xxhash/v2 v2.3.0
+go: downloading github.com/prometheus/procfs v0.22.0
+go: downloading github.com/mfridman/interpolate v0.0.2
+go: downloading github.com/sethvargo/go-retry v0.5.0
+go: downloading go.uber.org/multierr v1.11.0
+go: downloading golang.org/x/sync v0.24.0
+go: downloading github.com/jackc/puddle/v2 v2.2.3
+go: downloading github.com/jackc/pgpassfile v1.0.0
+go: downloading golang.org/x/text v0.43.0
+go: downloading github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761
+go: downloading github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
+go: downloading golang.org/x/sys v0.49.0
+=== RUN   TestChaos_PostgresOutageMidWorkload
+=== RUN   TestChaos_PostgresOutageMidWorkload/short_outage_is_absorbed_by_commit_retry
+2026/10/25 17:59:24 OK   00001_initial_schema.sql (93.82ms)
+2026/10/25 17:59:24 OK   00002_autovacuum_tuning.sql (3.24ms)
+2026/10/25 17:59:24 OK   00003_audit_log.sql (10.58ms)
+2026/10/25 17:59:24 OK   00004_job_trace_id.sql (1.84ms)
+2026/10/25 17:59:24 OK   00005_claim_probe_index.sql (8.3ms)
+2026/10/25 17:59:24 OK   00006_terminal_retention_index.sql (5.04ms)
+2026/10/25 17:59:24 goose: successfully migrated database to version: 6
+    pg_outage_test.go:61: scenario commit_budget=60s: stopping Postgres with 48/400 jobs done
+    pg_outage_test.go:61: CHAOS_RESULT outage_seconds=8.3
+    pg_outage_test.go:61: CHAOS_RESULT done_shortly_after_db_returned=48/400
+    pg_outage_test.go:61: CHAOS_RESULT recovery_to_all_done_seconds=12.0
+    pg_outage_test.go:61: CHAOS_RESULT scenario_commit_budget=60s jobs_rerun=11 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 double_success=0 not_exactly_one_success=0
+=== RUN   TestChaos_PostgresOutageMidWorkload/long_outage_exhausts_commit_budget_and_lease_recovery_takes_over
+2026/10/25 17:59:52 OK   00001_initial_schema.sql (97.5ms)
+2026/10/25 17:59:52 OK   00002_autovacuum_tuning.sql (3.48ms)
+2026/10/25 17:59:52 OK   00003_audit_log.sql (11.29ms)
+2026/10/25 17:59:52 OK   00004_job_trace_id.sql (1.95ms)
+2026/10/25 17:59:52 OK   00005_claim_probe_index.sql (8.58ms)
+2026/10/25 17:59:52 OK   00006_terminal_retention_index.sql (5.46ms)
+2026/10/25 17:59:52 goose: successfully migrated database to version: 6
+    pg_outage_test.go:64: scenario commit_budget=2s: stopping Postgres with 48/400 jobs done
+    pg_outage_test.go:64: CHAOS_RESULT outage_seconds=8.3
+    pg_outage_test.go:64: CHAOS_RESULT done_shortly_after_db_returned=48/400
+    pg_outage_test.go:64: CHAOS_RESULT recovery_to_all_done_seconds=12.4
+    pg_outage_test.go:64: CHAOS_RESULT scenario_commit_budget=2s jobs_rerun=16 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 double_success=0 not_exactly_one_success=0
+--- PASS: TestChaos_PostgresOutageMidWorkload (57.15s)
+    --- PASS: TestChaos_PostgresOutageMidWorkload/short_outage_is_absorbed_by_commit_retry (27.92s)
+    --- PASS: TestChaos_PostgresOutageMidWorkload/long_outage_exhausts_commit_budget_and_lease_recovery_takes_over (29.23s)
+PASS
+ok  	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/chaos	57.163s
+OUTAGE_RUN_5_EXIT=0

@@ -64,8 +64,8 @@ Claim query latency, median of 7:
 ## 4. Correctness verification
 
 - **Model-based property test** (`tests/property`): 25 seeds x 200 random operations (enqueue, claim batch, complete, fail, cancel, renew, lease expiry + recovery, stale completions). After **every** step the database is compared with an independent in-memory model and these invariants are checked: job status and attempt counts match; `outstanding_jobs` equals queued+running jobs per tenant; busy execution slots equal running jobs and never exceed the limit; every busy slot points at a running job holding that lease; unfinished attempts equal running jobs. A failing seed prints a replay command.
-- **Coverage:** 66.4% of statements across `internal/` and the SDK (short mode). The lowest files (retention/recovery/scheduler loop wrappers, worker runtime) are exercised by the real-process chaos tests, which `go test -cover` cannot attribute; the claim, recovery, completion, auth, audit and retention logic they call is covered directly.
-- **Mutation checking**: each guarantee below was deliberately broken and the suite had to fail. This found two blind spots in my own tests (a stale-lease generator that rarely hit the dangerous case; a double-claim race a sequential test cannot reach), both fixed.
+- **Coverage:** 66.4% of statements across `internal/` and the SDK, documented by the author but not reproduced with the corrected `-coverpkg` command. The lowest files (retention/recovery/scheduler loop wrappers, worker runtime) are exercised by the real-process chaos tests, which `go test -cover` cannot attribute; the claim, recovery, completion, auth, audit and retention logic they call is covered directly.
+- **Mutation checking**: 12 injected bugs were caught in author-run checks; this was not independently reproduced. This found two blind spots in my own tests (a stale-lease generator that rarely hit the dangerous case; a double-claim race a sequential test cannot reach), both fixed.
 
 | Injected bug | Caught by |
 |---|---|
@@ -87,14 +87,14 @@ Claim query latency, median of 7:
 | Scenario | Test | Result |
 |---|---|---|
 | Worker `kill -9` mid-job | `TestChaos_RealKill9_WorkerProcessRecovery` (real binary, separate process) | recovered **3.1 s** after the kill (lease 3 s); exactly 2 attempts on different workers; 0 leaks |
-| Postgres stopped ~10 s mid-workload | `TestChaos_PostgresOutageMidWorkload` (opt-in) | workers survived; 80/400 done when the DB returned; 16 in-flight jobs retried; all 400 done 10 s later; 0 dead, 0 leaks |
+| Postgres stopped ~10 s mid-workload | `TestChaos_PostgresOutageMidWorkload` (opt-in) | five runs, each with short and long outage scenarios; short-outage reruns ranged from 0 to 16, long-outage reruns were 16 every time; all runs had 0 dead, 0 leaks, 0 outstanding, 0 unfinished attempts, 0 double successes, and exactly one success per job |
 | Network faults via fault-injecting proxy: +250 ms latency, 4 connection resets, 8 s black hole (longer than the lease) | `TestChaos_NetworkFaults...` | all 240 jobs succeed; 0 dead, 0 leaks. **Wasted executions ranged from 3 to 16 across 11 runs** (the earlier 3-7 result was a best case). The hard bound is tenant concurrency 16 plus a margin of 4, reflecting at-least-once duplicate work during a partition longer than the lease. |
 | Poison row in lease recovery / retention | regression tests | healthy rows still processed; failure reported |
 | Stale worker completes after losing its lease | property + chaos | rejected (`ErrLeaseLost`) |
 
 ## 6. Soak (partial, honest)
 
-`TestSoak`, 150 jobs/s sustained, 2% transient and 0.2% permanent failures injected. The sandbox restarted at **432 s, 64,831 jobs**, so this is a partial run (the nightly CI job runs 15 minutes):
+The earlier partial `TestSoak` run, 150 jobs/s sustained, 2% transient and 0.2% permanent failures injected, was superseded by the later 30-minute pass below. The earlier sandbox restarted at **432 s, 64,831 jobs**:
 
 | | first third | last third |
 |---|---|---|
@@ -103,7 +103,7 @@ Claim query latency, median of 7:
 | goroutines | 24.8 | 23.9 |
 | heap | 5.0 MB | 6.1 MB |
 
-Zero errors logged; queue depth never above 3; dead tuples followed a healthy autovacuum sawtooth (600 to 17,700). **Latency drifted up ~25% over 7 minutes**; that is small and inconclusive but unexplained, which is exactly what the nightly run exists to watch.
+Zero errors logged; queue depth never above 3; dead tuples followed a healthy autovacuum sawtooth (600 to 17,700). The earlier **~25% latency drift over 7 minutes** is superseded by the later 30-minute pass, which showed no steady drift.
 
 ## 7. Known limits and what is not measured
 - At-least-once delivery. Handlers must be idempotent; idempotency keys protect submission only.
@@ -112,7 +112,7 @@ Zero errors logged; queue depth never above 3; dead tuples followed a healthy au
 - Single PostgreSQL primary: no failover tested (recovery = restore from backup).
 - **Not measured:** multi-core scaling, separate database host, network latency between nodes, runs longer than 7 minutes, load above ~1,000 jobs/s, multi-node workers.
 
-## Batch completion (written, not yet measured)
+## Batch completion (measured)
 `QF_BATCH_COMPLETION=true` groups successful completions into one statement. To measure it, run the
 drain benchmark twice on the same machine, 3 trials each, and report medians:
 ```bash

@@ -1,0 +1,171 @@
+# Unit tests for deploy/alerts-host.yml (the disk alerts). Run with:
+#   docker run --rm -v ${PWD}/deploy:/d --entrypoint promtool prom/prometheus:v2.55.1 test rules /d/tests/alerts-host.test.yml
+# They feed made-up node-exporter series into the rules and assert which alerts fire, and when.
+# No server, no disk filling, nothing real is touched.
+rule_files:
+  - ../alerts-host.yml
+
+evaluation_interval: 1m
+
+tests:
+  # ---------- HostDiskSpaceLow: 10% free (under 15%) for 10 minutes ----------
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '10+0x60'
+      - series: 'node_filesystem_size_bytes{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '100+0x60'
+    alert_rule_test:
+      - eval_time: 5m # condition true but the 10m "for" has not elapsed: must NOT fire yet
+        alertname: HostDiskSpaceLow
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: HostDiskSpaceLow
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              mountpoint: "/"
+              fstype: ext4
+              device: /dev/vda1
+              instance: "vps:9100"
+              job: node
+            exp_annotations:
+              summary: "Root disk on vps:9100 has 10% free"
+              runbook: docs/runbooks/runbook-f.md
+      - eval_time: 15m # 10% free is above the 8% critical line
+        alertname: HostDiskSpaceCritical
+        exp_alerts: []
+
+  # ---------- HostDiskSpaceCritical: 5% free (under 8%) for 5 minutes ----------
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '5+0x60'
+      - series: 'node_filesystem_size_bytes{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '100+0x60'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: HostDiskSpaceCritical
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: HostDiskSpaceCritical
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              mountpoint: "/"
+              fstype: ext4
+              device: /dev/vda1
+              instance: "vps:9100"
+              job: node
+            exp_annotations:
+              summary: "Root disk on vps:9100 is almost full (5% free): PostgreSQL will stop when it fills"
+              runbook: docs/runbooks/runbook-f.md
+
+  # ---------- Healthy disk (50% free): none of the space/inode alerts fire ----------
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '50+0x60'
+      - series: 'node_filesystem_size_bytes{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '100+0x60'
+      - series: 'node_filesystem_files_free{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '50+0x60'
+      - series: 'node_filesystem_files{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '100+0x60'
+    alert_rule_test:
+      - {eval_time: 30m, alertname: HostDiskSpaceLow, exp_alerts: []}
+      - {eval_time: 30m, alertname: HostDiskSpaceCritical, exp_alerts: []}
+      - {eval_time: 30m, alertname: HostDiskInodesLow, exp_alerts: []}
+      - {eval_time: 30m, alertname: HostDiskMetricsMissing, exp_alerts: []}
+
+  # ---------- Only the root filesystem is watched, and only real disks ----------
+  # a nearly full tmpfs on "/" and a nearly full /boot must stay silent
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/",fstype="tmpfs",device="tmpfs",instance="vps:9100",job="node"}'
+        values: '1+0x60'
+      - series: 'node_filesystem_size_bytes{mountpoint="/",fstype="tmpfs",device="tmpfs",instance="vps:9100",job="node"}'
+        values: '100+0x60'
+      - series: 'node_filesystem_avail_bytes{mountpoint="/boot",fstype="ext4",device="/dev/vda2",instance="vps:9100",job="node"}'
+        values: '1+0x60'
+      - series: 'node_filesystem_size_bytes{mountpoint="/boot",fstype="ext4",device="/dev/vda2",instance="vps:9100",job="node"}'
+        values: '100+0x60'
+    alert_rule_test:
+      - {eval_time: 30m, alertname: HostDiskSpaceLow, exp_alerts: []}
+      - {eval_time: 30m, alertname: HostDiskSpaceCritical, exp_alerts: []}
+
+  # ---------- HostDiskFillingFast: 39% free but dropping fast enough to hit zero within 6 hours ----------
+  # size 10000, free starts at 3900 and loses 20 per minute (about 1200 per hour): zero in ~3.25 hours.
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '3900-20x120'
+      - series: 'node_filesystem_size_bytes{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '10000+0x120'
+    alert_rule_test:
+      - eval_time: 10m # true but the 30m "for" has not elapsed
+        alertname: HostDiskFillingFast
+        exp_alerts: []
+      - eval_time: 45m
+        alertname: HostDiskFillingFast
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              mountpoint: "/"
+              fstype: ext4
+              device: /dev/vda1
+              instance: "vps:9100"
+              job: node
+            exp_annotations:
+              summary: "Root disk on vps:9100 is on course to fill within 6 hours"
+              runbook: docs/runbooks/runbook-f.md
+
+  # a disk with the same free space that is NOT shrinking must not trigger the "filling fast" alert
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '3900+0x120'
+      - series: 'node_filesystem_size_bytes{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '10000+0x120'
+    alert_rule_test:
+      - {eval_time: 90m, alertname: HostDiskFillingFast, exp_alerts: []}
+
+  # ---------- HostDiskInodesLow: 5% of inodes free (under 10%) for 10 minutes ----------
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_files_free{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '5+0x60'
+      - series: 'node_filesystem_files{mountpoint="/",fstype="ext4",device="/dev/vda1",instance="vps:9100",job="node"}'
+        values: '100+0x60'
+    alert_rule_test:
+      - {eval_time: 5m, alertname: HostDiskInodesLow, exp_alerts: []}
+      - eval_time: 15m
+        alertname: HostDiskInodesLow
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              mountpoint: "/"
+              fstype: ext4
+              device: /dev/vda1
+              instance: "vps:9100"
+              job: node
+            exp_annotations:
+              summary: "Root disk on vps:9100 has under 10% of inodes free"
+              runbook: docs/runbooks/runbook-f.md
+
+  # ---------- HostDiskMetricsMissing: the data disappears, so the disk alerts cannot fire ----------
+  - interval: 1m
+    input_series:
+      - series: 'up{job="queueforge-api",instance="api:9090"}' # something is scraped, but no node-exporter data
+        values: '1+0x60'
+    alert_rule_test:
+      - {eval_time: 5m, alertname: HostDiskMetricsMissing, exp_alerts: []}
+      - eval_time: 15m
+        alertname: HostDiskMetricsMissing
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              mountpoint: "/"
+            exp_annotations:
+              summary: "No root-disk metrics from node-exporter: the disk alerts cannot fire"
+              runbook: docs/runbooks/runbook-f.md

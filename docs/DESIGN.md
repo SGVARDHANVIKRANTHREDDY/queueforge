@@ -29,7 +29,7 @@ Exactly-once *execution* (impossible without cooperating handlers), sandboxing u
 - **Wake-ups**: `LISTEN/NOTIFY` for latency, polling as the source of truth (ADR-011).
 - **Observability**: DB-backed gauges (depth, *oldest runnable job age*, live workers), outcome counters, pool saturation, trace ids, an append-only audit log.
 
-**Transactional enqueue, precisely.** Over HTTP an enqueue is its own transaction (job + idempotency key + rate bucket + quota + NOTIFY commit atomically), but it *cannot* share a transaction with your business data. Code that embeds QueueForge in the same PostgreSQL database can call `JobRepo.EnqueueJobTx(ctx, tx, params)`: it runs inside a savepoint on *your* transaction, so the job exists if and only if your transaction commits, and a quota or rate-limit rejection does not poison your transaction. This path is covered by `tests/regression/enqueue_tx_test.go`, which has not yet been run (no Go toolchain was available when it was written).
+**Transactional enqueue, precisely.** Over HTTP an enqueue is its own transaction (job + idempotency key + rate bucket + quota + NOTIFY commit atomically), but it *cannot* share a transaction with your business data. Code that embeds QueueForge in the same PostgreSQL database can call `JobRepo.EnqueueJobTx(ctx, tx, params)`: it runs inside a savepoint on *your* transaction, so the job exists if and only if your transaction commits, and a quota or rate-limit rejection does not poison your transaction. This path is covered by `tests/regression/enqueue_tx_test.go`, and the regression suite passes on PostgreSQL 15, 16, and 17.
 
 ## 5. Alternatives considered
 | Option | Why not (for this scope) |
@@ -40,7 +40,7 @@ Exactly-once *execution* (impossible without cooperating handlers), sandboxing u
 | River (Postgres) | The closest alternative and **faster when tuned** (~1.8x drain). It lacks the tenant quotas/slots, idempotency-key semantics and audit trail built here. If you do not need those, use River |
 
 ## 6. Results
-Drain 16 to ~830 jobs/s; idle pickup 222 to ~9 ms; claim latency flat from 0 to 400k unrelated queued jobs; `kill -9` recovery in 3.1 s; Postgres outage survived with zero loss; 5,000 randomized operations verified against a model; every guarantee mutation-tested. Full tables in the benchmark report.
+Drain 16 to ~830 jobs/s; idle pickup 222 to ~9 ms; claim latency flat from 0 to 400k unrelated queued jobs; `kill -9` recovery in 3.1 s; Postgres outage survived with zero loss; 5,000 randomized operations verified against a model; 12 injected bugs were caught in author-run mutation checks, not independently reproduced. Full tables in the benchmark report.
 
 ## 7. Risks and mitigations
 | Risk | Mitigation | Residual |
@@ -49,10 +49,10 @@ Drain 16 to ~830 jobs/s; idle pickup 222 to ~9 ms; claim latency flat from 0 to 
 | Hot per-tenant rows serialise one tenant's enqueues (~800/s) | Many tenants scale; token bucket and usage in one statement | A single huge tenant is capped |
 | Handlers running twice | Idempotency guidance, fenced results, attempt audit | Side effects are the handler's responsibility |
 | Retention falling behind | Drain loop, partial index, backlog gauge + alert | Needs the alert to be watched |
-| Throughput below Redis/River | Documented trade-off; batch completion identified as next optimisation | Not implemented |
+| Throughput below Redis/River | Documented trade-off; batch completion is available behind `QF_BATCH_COMPLETION` | Disabled by default because the measured batch path was slower in this environment |
 
 ## 8. Open questions
-1. Is a **batch completion** path (one statement for many finished jobs, like River's completer) worth its added latency? Measure first.
+1. Should `QF_BATCH_COMPLETION` be enabled after further workload-specific measurement? It is implemented, but the measured batch path was 1,111 jobs/s versus 1,224 jobs/s per-job completion, so it remains disabled by default.
 2. Should `outstanding_jobs` be derived lazily to remove a hot row per job?
 3. Partition `jobs` by completion time to make retention a `DROP PARTITION`? Needs measurement at >100M rows.
 4. Opt-in **lite mode** that skips per-attempt rows for tenants who do not need an audit trail?
@@ -60,4 +60,4 @@ Drain 16 to ~830 jobs/s; idle pickup 222 to ~9 ms; claim latency flat from 0 to 
 ## 9. FAQ
 **Why not exactly-once?** Because a handler's side effect and its commit cannot be made atomic. What *is* guaranteed: a job completes at most once in the database (fencing) and runs at least once.
 **What happens if the database restarts mid-job?** Workers retry the commit with backoff while the lease renewer runs; if the outage outlasts the lease, the job is recovered and retried. This is at-least-once execution: a partition longer than the lease can duplicate work, bounded in the network-fault test by the tenant's maximum concurrency plus a small margin (16 + 4 = 20). The earlier 3-7 wasted-execution result was a best case; 11 runs ranged from 3 to 16.
-**What would you do with two more weeks?** Deploy it with real users first (nothing teaches more), then batch completion, then a separate-hardware scaling curve.
+**What would you do with two more weeks?** Deploy it with real users first (nothing teaches more), then measure batch completion on representative workloads, then a separate-hardware scaling curve.

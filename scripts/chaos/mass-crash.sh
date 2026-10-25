@@ -26,7 +26,9 @@
 #   API_KEY        key for that tenant
 #   BASE_URL       API base URL reachable from this machine (default http://localhost:8080)
 #   COMPOSE        compose command prefix (default: docker compose -f deploy/docker-compose.prod.yml)
+#                  LOCAL: COMPOSE="docker compose -f deploy/docker-compose.yml" (services postgres/api/worker)
 #   WORKERS        worker replicas (default 4)       JOBS  total jobs to enqueue (default 3000)
+#   RESTART_AFTER  seconds to wait before restarting the killed workers (default 5)
 #   LEASE_SECONDS  your QF_DEFAULT_LEASE_DURATION in seconds, only used for the report (default 30)
 #   PGUSER, PGDB   database user/name inside the postgres container (defaults postgres / queueforge)
 #   JOB_MS         how long each job sleeps (default 600000 = 10 min, so all stay in flight)
@@ -121,6 +123,11 @@ echo "MASS_CRASH_RESULT running_at_kill=$running"
 t_kill=$(now)
 $COMPOSE kill -s KILL worker >/dev/null
 echo "all workers SIGKILLed at $(date -u +%H:%M:%S)"
+# Lease recovery runs inside the workers, so the fleet must come back for recovery to start. A real
+# orchestrator does this through a restart policy; the dev compose file has none, so do it explicitly
+# after RESTART_AFTER seconds (default 5) and count that delay as part of the recovery time.
+sleep "${RESTART_AFTER:-5}"
+$COMPOSE up -d --scale worker="$WORKERS" worker >/dev/null
 
 # 4. Recovery: the expired leases must each be recovered (attempt closed as lease_expired).
 first=""

@@ -153,7 +153,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: promtool check rules
         run: |
-          docker run --rm -v "$PWD/deploy:/d" --entrypoint promtool prom/prometheus:v2.55.1 check rules /d/alerts.yml
+          docker run --rm -v "$PWD/deploy:/d" --entrypoint promtool prom/prometheus:v2.55.1 check rules /d/alerts.yml /d/alerts-host.yml
+      - name: promtool unit tests for alert rules
+        run: |
+          docker run --rm -v "$PWD/deploy:/d" --entrypoint promtool prom/prometheus:v2.55.1 test rules /d/tests/alerts-host.test.yml /d/tests/alerts-queue.test.yml
 
   nightly:
     name: Nightly soak + Postgres outage

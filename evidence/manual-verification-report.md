@@ -1,4 +1,4 @@
-﻿# QueueForge Manual Verification and Launch Checklist Report
+# QueueForge Manual Verification and Launch Checklist Report
 
 Date: 2026-10-22
 Repository: github.com/SGVARDHANVIKRANTHREDDY/queueforge
@@ -1831,3 +1831,169 @@ to 16.
 The result line always prints `wasted_executions`. The following remain hard
 failures regardless of that bound: `dead`, `busy_slots`, `outstanding`,
 `unfinished_attempts`, `double_success`, and `not_exactly_one_success`.
+
+## Prometheus alert-test execution
+
+The supplied alert tests were placed at
+`deploy/tests/alerts-host.test.yml` and `deploy/tests/alerts-queue.test.yml`.
+The exact Prometheus rule validation completed successfully:
+
+    Checking /d/alerts.yml
+      SUCCESS: 10 rules found
+    Checking /d/alerts-host.yml
+      SUCCESS: 5 rules found
+
+The combined unit-test command also passed:
+
+    docker run --rm -v ${PWD}/deploy:/d --entrypoint promtool \
+      prom/prometheus:v2.55.1 test rules \
+      /d/tests/alerts-host.test.yml /d/tests/alerts-queue.test.yml
+    SUCCESS
+      SUCCESS
+
+The requested teeth check temporarily changed the `HostDiskSpaceLow`
+threshold from `0.15` to `0.05`. The host test then failed because the
+expected low-disk alert did not fire, proving that the test detects the
+threshold mutation. The original rule file was restored and its post-restore
+diff exit code was `0`.
+
+## Latest Linux runtime evidence
+
+The new strict network-fault test was run five times alone with
+`QF_CHAOS_STRICT=1` and the test bound of `20`. All five passed:
+
+    run 1: executions=255 wasted_executions=15 dead=0 busy_slots=0
+           outstanding=0 unfinished_attempts=0 double_success=0
+           not_exactly_one_success=0
+    run 2: executions=256 wasted_executions=16 dead=0 busy_slots=0
+           outstanding=0 unfinished_attempts=0 double_success=0
+           not_exactly_one_success=0
+    run 3: executions=256 wasted_executions=16 dead=0 busy_slots=0
+           outstanding=0 unfinished_attempts=0 double_success=0
+           not_exactly_one_success=0
+    run 4: executions=256 wasted_executions=16 dead=0 busy_slots=0
+           outstanding=0 unfinished_attempts=0 double_success=0
+           not_exactly_one_success=0
+    run 5: executions=255 wasted_executions=15 dead=0 busy_slots=0
+           outstanding=0 unfinished_attempts=0 double_success=0
+           not_exactly_one_success=0
+
+The fresh Linux `-race -v` run passed the real-worker chaos package and all
+six lifecycle tests. The PostgreSQL-outage test was explicitly skipped
+because `QF_CHAOS_PG_STOP` and `QF_CHAOS_PG_START` were not set:
+
+    --- SKIP: TestChaos_PostgresOutageMidWorkload
+    PASS
+    ok .../tests/chaos
+    PASS
+    ok .../tests/regression
+
+The corrected cross-package coverage command completed all packages in the
+Linux disposable environment. `go tool cover -func=c.out` reported:
+
+    total: (statements) 66.4%
+
+The earlier Windows coverage attempt failed because it was run outside the
+Docker network and could not resolve `qf-race-pg` / connect to the local
+PostgreSQL port; that failure is environmental, not a test assertion.
+
+## Local reliability drills
+
+The supplied drill files were placed at:
+
+    scripts/mutation/run.sh
+    scripts/drills/restore-drill-local.sh
+    scripts/chaos/mass-crash.sh
+
+All three shell files were verified with LF line endings. The mutation dry
+run matched all six patterns exactly once and restored both source files:
+
+    caught=0 survived=0 invalid=0
+    files restored: yes
+
+The first real mutation run did not produce a valid matrix. Every unmutated
+baseline test failed before its mutation could be judged:
+
+    M1 INVALID-baseline
+    M2 INVALID-baseline
+    M3 INVALID-baseline
+    M4 INVALID-baseline
+    M5 INVALID-baseline
+    M6 INVALID-baseline
+    caught=0 survived=0 invalid=6
+    files restored: yes
+
+Examples of the baseline failures were stale success/cancel returning
+`<nil>` instead of `ErrLeaseLost`, invariant failures in the renewal test,
+and nine double-leased jobs in the concurrent-claim test. This is recorded
+as an invalid mutation run, not as six caught mutations.
+
+The restore drill initially exposed a script bug: its key regex captured the
+truncated `Prefix: qf_live_...` value instead of the full `SECRET TOKEN`.
+The placed script was corrected to extract only the `SECRET TOKEN` line. The
+rerun passed:
+
+    BEFORE backup = 500|300|200|300|1|200
+    RESTORE_DRILL_RESULT backup_seconds=0.3 backup_bytes=385293
+    RESTORE_DRILL_RESULT restore_seconds=0.5
+    AFTER restore = 500|300|200|300|1|200
+    RESTORE_DRILL_RESULT outstanding_before_reconcile=200 outstanding_after_reconcile=200
+    RESTORE_DRILL_RESULT rto_seconds_disaster_to_all_work_done=7.2
+    RESTORE_DRILL_RESULT jobs=500 dead=0 busy_slots=0 unfinished_attempts=0
+      outstanding=0 not_exactly_one_success=0
+    RESTORE_DRILL_RESULT verdict=PASS rpo_jobs_lost=100
+
+The mass-crash drill ran against a disposable Compose project with four
+workers, 3,000 jobs, and a 30-second lease. Port 8080 was already owned by
+the VS Code AgentService, so the disposable API was mapped to port 18080.
+All four project workers were killed and restarted:
+
+    MASS_CRASH_RESULT enqueue_seconds=6.4
+    MASS_CRASH_RESULT running_at_kill=64
+    MASS_CRASH_RESULT first_recovery_seconds=52.2 all_recovered_seconds=52.2
+      lease_seconds=30
+    MASS_CRASH_RESULT all_done_seconds=656.5 jobs_rerun=64 dead=0
+      busy_slots=0 unfinished_attempts=0 outstanding=0 not_exactly_one_success=0
+    MASS_CRASH_RESULT verdict=PASS
+
+The `lease_seconds=30` field above is the verbatim script output. The
+application’s effective lease default is 60 seconds with renewals every
+20 seconds; the script’s `LEASE_SECONDS=30` value is only a label for the
+drill’s reporting and does not change the application configuration. The
+52.2-second recovery is therefore approximately one lease/recovery interval,
+including restart and recovery-tick delays. The 656.5-second
+`all_done_seconds` value is dominated by the intentionally configured
+10-minute `JOB_MS` sleep and is not a recovery or drain benchmark.
+
+The corrected mutation script from `qf-drills-v2` was then installed. Its
+baseline check runs before each mutation. Against a fresh PostgreSQL
+container, the complete matrix passed:
+
+    M1 CAUGHT
+    M2 CAUGHT
+    M3 CAUGHT
+    M4 CAUGHT
+    M5 CAUGHT
+    M6 CAUGHT
+    caught=6 survived=0 invalid=0
+    files restored: yes
+
+The disposable Compose stack, PostgreSQL container, network, temporary
+credentials, and temporary port override were removed after the drills.
+
+The mutation script was rerun after changing its caught-test logging to retain
+the full failing output. Against a fresh PostgreSQL container, the result was:
+
+    M1 CAUGHT
+    M2 CAUGHT
+    M3 CAUGHT
+    M4 CAUGHT
+    M5 CAUGHT
+    M6 CAUGHT
+    caught=6 survived=0 invalid=0
+    files restored: yes
+
+The complete M6 failure evidence is now retained:
+
+    --- FAIL: TestClaim_ConcurrentWorkersNeverDoubleClaim (1.86s)
+        regression_test.go:461: 6 jobs were leased more than once by concurrent workers

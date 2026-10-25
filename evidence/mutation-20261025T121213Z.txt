@@ -1,0 +1,114 @@
+Mutation drill started 2026-10-25T12:12:13Z on commit 5516d6a
+
+=== M1: success completion accepts a STALE lease token (fencing removed)
+  expected to be caught by: ./tests/regression/ -run 'TestLifecycle_StaleWorkerAfterLeaseExpiryCannotOverwriteRecoveredJob' (up to 1 run(s))
+  attempt 1: tests FAILED, so the bug was caught. Full failing output:
+    2026/10/25 12:12:39 OK   00001_initial_schema.sql (135.38ms)
+    2026/10/25 12:12:39 OK   00002_autovacuum_tuning.sql (4.24ms)
+    2026/10/25 12:12:39 OK   00003_audit_log.sql (15.17ms)
+    2026/10/25 12:12:39 OK   00004_job_trace_id.sql (2.55ms)
+    2026/10/25 12:12:39 OK   00005_claim_probe_index.sql (10.33ms)
+    2026/10/25 12:12:39 OK   00006_terminal_retention_index.sql (6.72ms)
+    2026/10/25 12:12:39 goose: successfully migrated database to version: 6
+    --- FAIL: TestLifecycle_StaleWorkerAfterLeaseExpiryCannotOverwriteRecoveredJob (0.33s)
+        lifecycle_race_test.go:94: stale success: want ErrLeaseLost, got <nil>
+    FAIL
+    FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/regression	0.350s
+    FAIL
+  RESULT: CAUGHT
+
+=== M2: success completion forgets to release the execution slot
+  expected to be caught by: ./tests/regression/ -run 'TestLifecycle_RenewalBeatsRecovery' (up to 1 run(s))
+  attempt 1: tests FAILED, so the bug was caught. Full failing output:
+    2026/10/25 12:12:45 OK   00001_initial_schema.sql (138.79ms)
+    2026/10/25 12:12:45 OK   00002_autovacuum_tuning.sql (4.54ms)
+    2026/10/25 12:12:45 OK   00003_audit_log.sql (16.57ms)
+    2026/10/25 12:12:45 OK   00004_job_trace_id.sql (2.33ms)
+    2026/10/25 12:12:45 OK   00005_claim_probe_index.sql (12.53ms)
+    2026/10/25 12:12:45 OK   00006_terminal_retention_index.sql (9.06ms)
+    2026/10/25 12:12:45 goose: successfully migrated database to version: 6
+    --- FAIL: TestLifecycle_RenewalBeatsRecovery (0.33s)
+        lifecycle_race_test.go:151: invariant violated: outstanding=0 (want queued+running=0), busy_slots=1 and unfinished_attempts=0 (want running=0)
+    FAIL
+    FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/regression	0.340s
+    FAIL
+  RESULT: CAUGHT
+
+=== M3: success completion forgets to decrement the tenant's outstanding-jobs counter
+  expected to be caught by: ./tests/regression/ -run 'TestLifecycle_RenewalBeatsRecovery' (up to 1 run(s))
+  attempt 1: tests FAILED, so the bug was caught. Full failing output:
+    2026/10/25 12:12:47 OK   00001_initial_schema.sql (172.55ms)
+    2026/10/25 12:12:47 OK   00002_autovacuum_tuning.sql (6.25ms)
+    2026/10/25 12:12:47 OK   00003_audit_log.sql (22.54ms)
+    2026/10/25 12:12:47 OK   00004_job_trace_id.sql (2.97ms)
+    2026/10/25 12:12:47 OK   00005_claim_probe_index.sql (15.72ms)
+    2026/10/25 12:12:47 OK   00006_terminal_retention_index.sql (9.1ms)
+    2026/10/25 12:12:47 goose: successfully migrated database to version: 6
+    --- FAIL: TestLifecycle_RenewalBeatsRecovery (0.39s)
+        lifecycle_race_test.go:151: invariant violated: outstanding=1 (want queued+running=0), busy_slots=0 and unfinished_attempts=0 (want running=0)
+    FAIL
+    FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/regression	0.405s
+    FAIL
+  RESULT: CAUGHT
+
+=== M4: success completion leaves the attempt row unfinished
+  expected to be caught by: ./tests/regression/ -run 'TestLifecycle_RenewalBeatsRecovery' (up to 1 run(s))
+  attempt 1: tests FAILED, so the bug was caught. Full failing output:
+    2026/10/25 12:12:51 OK   00001_initial_schema.sql (180.74ms)
+    2026/10/25 12:12:51 OK   00002_autovacuum_tuning.sql (5.28ms)
+    2026/10/25 12:12:51 OK   00003_audit_log.sql (16.98ms)
+    2026/10/25 12:12:51 OK   00004_job_trace_id.sql (2.6ms)
+    2026/10/25 12:12:51 OK   00005_claim_probe_index.sql (11.75ms)
+    2026/10/25 12:12:51 OK   00006_terminal_retention_index.sql (8.23ms)
+    2026/10/25 12:12:51 goose: successfully migrated database to version: 6
+    --- FAIL: TestLifecycle_RenewalBeatsRecovery (0.36s)
+        lifecycle_race_test.go:151: invariant violated: outstanding=0 (want queued+running=0), busy_slots=0 and unfinished_attempts=1 (want running=0)
+    FAIL
+    FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/regression	0.378s
+    FAIL
+  RESULT: CAUGHT
+
+=== M5: cancelled completion accepts a STALE lease token (fencing removed)
+  expected to be caught by: ./tests/regression/ -run 'TestLifecycle_StaleWorkerAfterLeaseExpiryCannotOverwriteRecoveredJob' (up to 1 run(s))
+  attempt 1: tests FAILED, so the bug was caught. Full failing output:
+    2026/10/25 12:12:53 OK   00001_initial_schema.sql (135.39ms)
+    2026/10/25 12:12:53 OK   00002_autovacuum_tuning.sql (4.61ms)
+    2026/10/25 12:12:53 OK   00003_audit_log.sql (21.82ms)
+    2026/10/25 12:12:53 OK   00004_job_trace_id.sql (2.88ms)
+    2026/10/25 12:12:53 OK   00005_claim_probe_index.sql (12.91ms)
+    2026/10/25 12:12:53 OK   00006_terminal_retention_index.sql (7.41ms)
+    2026/10/25 12:12:53 goose: successfully migrated database to version: 6
+    --- FAIL: TestLifecycle_StaleWorkerAfterLeaseExpiryCannotOverwriteRecoveredJob (0.32s)
+        lifecycle_race_test.go:100: stale cancel: want ErrLeaseLost, got <nil>
+    FAIL
+    FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/regression	0.336s
+    FAIL
+  RESULT: CAUGHT
+
+=== M6: claim loses its 'still queued?' re-check after taking the row lock (double claims)
+  expected to be caught by: ./tests/regression/ -run 'TestClaim_ConcurrentWorkersNeverDoubleClaim' (up to 3 run(s))
+  attempt 1: tests FAILED, so the bug was caught. Full failing output:
+    2026/10/25 12:13:00 OK   00001_initial_schema.sql (139.95ms)
+    2026/10/25 12:13:00 OK   00002_autovacuum_tuning.sql (4.24ms)
+    2026/10/25 12:13:00 OK   00003_audit_log.sql (15.01ms)
+    2026/10/25 12:13:00 OK   00004_job_trace_id.sql (2.26ms)
+    2026/10/25 12:13:00 OK   00005_claim_probe_index.sql (11.38ms)
+    2026/10/25 12:13:00 OK   00006_terminal_retention_index.sql (6.99ms)
+    2026/10/25 12:13:00 goose: successfully migrated database to version: 6
+    --- FAIL: TestClaim_ConcurrentWorkersNeverDoubleClaim (1.86s)
+        regression_test.go:461: 6 jobs were leased more than once by concurrent workers
+    FAIL
+    FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/regression	1.880s
+    FAIL
+  RESULT: CAUGHT
+
+=== SUMMARY ===
+  M1 CAUGHT
+  M2 CAUGHT
+  M3 CAUGHT
+  M4 CAUGHT
+  M5 CAUGHT
+  M6 CAUGHT
+caught=6 survived=0 invalid=0
+files restored: yes
+evidence written to evidence/mutation-20261025T121213Z.txt

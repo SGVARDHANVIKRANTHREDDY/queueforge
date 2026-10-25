@@ -1,0 +1,30 @@
+== local restore drill 2026-10-25T07:29:14Z, image queueforge:local ==
+-- 1. source database, schema, tenant and key
+2026/10/25 07:29:17 OK   00001_initial_schema.sql (113.44ms)
+2026/10/25 07:29:17 OK   00002_autovacuum_tuning.sql (2.96ms)
+2026/10/25 07:29:17 OK   00003_audit_log.sql (13.23ms)
+2026/10/25 07:29:17 OK   00004_job_trace_id.sql (2.12ms)
+2026/10/25 07:29:18 OK   00005_claim_probe_index.sql (8.59ms)
+2026/10/25 07:29:18 OK   00006_terminal_retention_index.sql (5.83ms)
+2026/10/25 07:29:18 goose: successfully migrated database to version: 6
+tenant=4bb22788-1d44-4f41-ae5d-5d67d4a6cb9d (key not printed)
+-- 2. create state: 300 finished jobs and 200 still queued
+BEFORE backup  (jobs|succeeded|queued|attempts|api_keys|outstanding) = 500|300|200|300|1|200
+-- 3. take the backup (plain SQL dump)
+RESTORE_DRILL_RESULT backup_seconds=0.3 backup_bytes=385293
+-- 4. work that arrives AFTER the backup (this is the RPO: it will be lost)
+source now has 600 jobs; the backup contains 500
+-- 5. DISASTER: the source database and API are destroyed
+-- 6. restore into a brand-new PostgreSQL
+RESTORE_DRILL_RESULT restore_seconds=0.5
+AFTER restore  (same columns) = 500|300|200|300|1|200
+data identical to the backup moment: yes; the 100 post-backup jobs are absent as expected
+-- 7. usage counters need no repair
+reconcile-usage said: Tenant 4bb22788-1d44-4f41-ae5d-5d67d4a6cb9d usage reconciled. Nonterminal outstanding jobs: 200
+RESTORE_DRILL_RESULT outstanding_before_reconcile=200 outstanding_after_reconcile=200
+2026/10/25 07:29:33 goose: no migrations to run. current version: 6
+-- 8. start the system on the restored database; the 200 queued jobs must drain
+RESTORE_DRILL_RESULT rto_seconds_disaster_to_all_work_done=7.2
+-- 9. integrity after the drain
+RESTORE_DRILL_RESULT jobs=500 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 not_exactly_one_success=0
+RESTORE_DRILL_RESULT verdict=PASS rpo_jobs_lost=100 (everything created after the backup)

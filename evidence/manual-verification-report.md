@@ -1997,3 +1997,39 @@ The complete M6 failure evidence is now retained:
 
     --- FAIL: TestClaim_ConcurrentWorkersNeverDoubleClaim (1.86s)
         regression_test.go:461: 6 jobs were leased more than once by concurrent workers
+
+## Mutation matrix batch 2
+
+The new batch-2 script was placed at
+`scripts/mutation/run-batch2.sh` with LF line endings. Its dry run matched
+all seven patterns exactly once and restored every source file.
+
+The real run used a fresh PostgreSQL 16 container and the existing tracked
+security and regression tests. All seven additional mutation classes were
+caught:
+
+    M7 CAUGHT
+    M8 CAUGHT
+    M9 CAUGHT
+    M10 CAUGHT
+    M11 CAUGHT
+    M12 CAUGHT
+    M13 CAUGHT
+    caught=7 survived=0 invalid=0
+    files restored: yes
+
+The script retained full failure output in separate evidence files:
+
+    mutation2-20261025T174142Z-M7-failure.txt
+    mutation2-20261025T174142Z-M8-failure.txt
+    mutation2-20261025T174142Z-M9-failure.txt
+    mutation2-20261025T174142Z-M10-failure.txt
+    mutation2-20261025T174142Z-M11-failure.txt
+    mutation2-20261025T174142Z-M12-failure.txt
+    mutation2-20261025T174142Z-M13-failure.txt
+
+Notable diagnostics included the invariant failure for the unreleased
+failure/recovery slot (M7), stale failure fencing (M8), a cross-tenant HTTP
+200 (M9), leaked hostname information (M10), 40 wrong keys never throttled
+(M11), `last_used_at` advancing within one minute (M12), and zero audit
+entries where one was required (M13).

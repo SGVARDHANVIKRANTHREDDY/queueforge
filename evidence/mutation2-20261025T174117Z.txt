@@ -1,0 +1,57 @@
+Mutation drill (batch 2) started 2026-10-25T17:41:17Z on commit 65e2770
+
+=== M7: failed/recovered attempt never releases its execution slot (shared by retry, dead-letter and lease recovery)
+  expected to be caught by: ./tests/regression/ -run 'TestLifecycle_StaleWorkerAfterLeaseExpiryCannotOverwriteRecoveredJob|TestLifecycle_RecoveryRacingWithLateCompletion' (up to 1 run(s))
+  dry run: pattern matched once and changed internal/postgres/job_repo.go
+-		WHERE tenant_id = $1 AND current_job_id = $2 AND lease_token = $3
++		WHERE tenant_id = $1 AND current_job_id = $2 AND lease_token = $3 AND false
+
+=== M8: failure completion accepts a STALE lease token (fencing removed)
+  expected to be caught by: ./tests/regression/ -run 'TestLifecycle_StaleWorkerAfterLeaseExpiryCannotOverwriteRecoveredJob' (up to 1 run(s))
+  dry run: pattern matched once and changed internal/postgres/job_repo.go
+-		WHERE id = $1 AND status = 'running' AND lease_token = $2
++		WHERE id = $1 AND status = 'running' AND ($2::uuid IS NOT NULL OR lease_token = $2)
+
+=== M9: GetJob ignores the tenant (cross-tenant read)
+  expected to be caught by: ./tests/security/ -run 'TestTenantIsolationFuzz' (up to 1 run(s))
+  dry run: pattern matched once and changed internal/postgres/job_repo.go
+-		WHERE id = $1 AND tenant_id = $2
++		WHERE id = $1 AND ($2::uuid IS NOT NULL OR tenant_id = $2)
+
+=== M10: /v1/workers returns infrastructure details to tenants without workers:read
+  expected to be caught by: ./tests/security/ -run 'TestWorkersEndpointDoesNotLeakInfrastructure' (up to 1 run(s))
+  dry run: pattern matched once and changed internal/httpapi/api.go
+-	if principal == nil || !principal.HasPermission("workers:read") {
++	if principal == nil && !principal.HasPermission("workers:read") {
+
+=== M11: authentication-failure limiter never blocks (brute force allowed)
+  expected to be caught by: ./tests/security/ -run 'TestBruteForceIsThrottledBeforeTouchingTheDatabase' (up to 1 run(s))
+  dry run: pattern matched once and changed internal/auth/auth.go
+-			if blocked, retry := limiter.Blocked(client); blocked {
++			if blocked, retry := limiter.Blocked(client); blocked && false {
+
+=== M12: last_used_at is rewritten on EVERY request (write amplification on one hot row)
+  expected to be caught by: ./tests/security/ -run 'TestLastUsedAtIsNotRewrittenOnEveryRequest' (up to 1 run(s))
+  dry run: pattern matched once and changed internal/postgres/tenant_repo.go
+-		       (k.last_used_at IS NULL OR k.last_used_at < clock_timestamp() - interval '1 minute') AS touch_due
++		       true AS touch_due
+-					WHERE id = $1 AND (last_used_at IS NULL OR last_used_at < clock_timestamp() - interval '1 minute')
++					WHERE id = $1 AND true
+
+=== M13: audit middleware removed from the API router (control-plane actions no longer logged)
+  expected to be caught by: ./tests/security/ -run 'TestAuditLogRecordsControlPlaneActionsOnly' (up to 1 run(s))
+  dry run: pattern matched once and changed internal/httpapi/api.go
+-		v1.Use(a.auditMiddleware)
++		_ = a.auditMiddleware
+
+=== SUMMARY ===
+  M7 DRYRUN-OK
+  M8 DRYRUN-OK
+  M9 DRYRUN-OK
+  M10 DRYRUN-OK
+  M11 DRYRUN-OK
+  M12 DRYRUN-OK
+  M13 DRYRUN-OK
+caught=0 survived=0 invalid=0
+files restored: yes
+evidence written to evidence/mutation2-20261025T174117Z.txt

@@ -1,0 +1,18 @@
+2026/10/25 17:42:33 OK   00001_initial_schema.sql (200.85ms)
+2026/10/25 17:42:33 OK   00002_autovacuum_tuning.sql (7.31ms)
+2026/10/25 17:42:33 OK   00003_audit_log.sql (22.03ms)
+2026/10/25 17:42:33 OK   00004_job_trace_id.sql (3.27ms)
+2026/10/25 17:42:33 OK   00005_claim_probe_index.sql (16.45ms)
+2026/10/25 17:42:33 OK   00006_terminal_retention_index.sql (8.46ms)
+2026/10/25 17:42:33 goose: successfully migrated database to version: 6
+2026/10/25 17:42:33 INFO job enqueued job_id=ed266c79-0ea4-47db-a466-1f28709642b7 trace_id=b741b4c9e3e8a8e1e7310d943cf97292 tenant_id=db44302e-bcf2-4c02-9309-d2d89f8b3f16 queue=default idempotent_replay=false
+2026/10/25 17:42:33 INFO job enqueued job_id=40eea849-3efc-4dab-83d6-f8df899c8c94 trace_id=ef1b30eeb971c9a388c3af7c82b78ad2 tenant_id=db44302e-bcf2-4c02-9309-d2d89f8b3f16 queue=default idempotent_replay=false
+2026/10/25 17:42:33 INFO job enqueued job_id=5012722d-0eff-4a01-b6d8-14683a4c2b6f trace_id=20dbff33921012d81efe52e2521441e5 tenant_id=db44302e-bcf2-4c02-9309-d2d89f8b3f16 queue=default idempotent_replay=false
+2026/10/25 17:42:33 INFO job enqueued job_id=92814864-6b45-40d9-89af-fca546951a78 trace_id=f94b9033027124352d7597b77011b22a tenant_id=db44302e-bcf2-4c02-9309-d2d89f8b3f16 queue=default idempotent_replay=false
+2026/10/25 17:42:33 INFO job enqueued job_id=df826d27-7748-4d98-922b-258820d53d09 trace_id=7141a905e56b43f06ff367d41c289e9b tenant_id=db44302e-bcf2-4c02-9309-d2d89f8b3f16 queue=default idempotent_replay=false
+2026/10/25 17:42:33 INFO job enqueued job_id=80f94783-1251-4a16-ae1a-a55b2ab7c53a trace_id=f5beb876b7f58e208bd2ee7e679c0a57 tenant_id=db44302e-bcf2-4c02-9309-d2d89f8b3f16 queue=default idempotent_replay=false
+--- FAIL: TestTenantIsolationFuzz (0.50s)
+    security_test.go:404: CROSS-TENANT ACCESS: tenant B GET /v1/jobs/5012722d-0eff-4a01-b6d8-14683a4c2b6f succeeded with 200: {"attempts":null,"attempts_started":0,"cancellation_requested_at":null,"completed_at":null,"created_at":"2026-10-25T17:42:33.216418Z","id":"5012722d-0eff-4a01-b6d8-14683a4c2b6f","last_error_at":null,"last_error_code":null,"last_error_message":null,"max_attempts":5,"payload":{"x":1},"priority":5,"queue":"default","replay_generation":0,"result":null,"run_at":"2026-10-25T17:42:33.216418Z","schedule_id":null,"scheduled_for":null,"started_at":null,"status":"queued","task_type":"echo","timeout_seconds":300,"trace_id":"20dbff33921012d81efe52e2521441e5","updated_at":"2026-10-25T17:42:33.216418Z"}
+FAIL
+FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/security	0.523s
+FAIL

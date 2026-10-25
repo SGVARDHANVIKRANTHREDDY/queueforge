@@ -1,0 +1,12 @@
+2026/10/25 17:42:39 OK   00001_initial_schema.sql (190.4ms)
+2026/10/25 17:42:39 OK   00002_autovacuum_tuning.sql (5.18ms)
+2026/10/25 17:42:39 OK   00003_audit_log.sql (23.06ms)
+2026/10/25 17:42:39 OK   00004_job_trace_id.sql (3.35ms)
+2026/10/25 17:42:39 OK   00005_claim_probe_index.sql (18.22ms)
+2026/10/25 17:42:39 OK   00006_terminal_retention_index.sql (9.16ms)
+2026/10/25 17:42:39 goose: successfully migrated database to version: 6
+--- FAIL: TestWorkersEndpointDoesNotLeakInfrastructure (0.41s)
+    security_test.go:318: tenant without workers:read can see "prod-db-host-7" in /v1/workers: {"workers":[{"id":"a740245e-00a9-4811-a48a-5fbe92b9544d","process_name":"secret-proc","hostname":"prod-db-host-7","version":"9.9.9","queues":["default"],"task_types":["acme.confidential.report"],"started_at":"2026-10-25T17:42:39.254499Z","last_seen_at":"2026-10-25T17:42:39.254499Z","draining":false,"metadata":{}}]}
+FAIL
+FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/security	0.424s
+FAIL

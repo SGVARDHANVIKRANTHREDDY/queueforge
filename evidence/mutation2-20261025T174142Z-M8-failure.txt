@@ -1,0 +1,12 @@
+2026/10/25 17:42:24 OK   00001_initial_schema.sql (192.78ms)
+2026/10/25 17:42:24 OK   00002_autovacuum_tuning.sql (6.55ms)
+2026/10/25 17:42:25 OK   00003_audit_log.sql (27.95ms)
+2026/10/25 17:42:25 OK   00004_job_trace_id.sql (4.44ms)
+2026/10/25 17:42:25 OK   00005_claim_probe_index.sql (14.69ms)
+2026/10/25 17:42:25 OK   00006_terminal_retention_index.sql (9.17ms)
+2026/10/25 17:42:25 goose: successfully migrated database to version: 6
+--- FAIL: TestLifecycle_StaleWorkerAfterLeaseExpiryCannotOverwriteRecoveredJob (0.44s)
+    lifecycle_race_test.go:97: stale failure: want ErrLeaseLost, got <nil>
+FAIL
+FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/regression	0.457s
+FAIL

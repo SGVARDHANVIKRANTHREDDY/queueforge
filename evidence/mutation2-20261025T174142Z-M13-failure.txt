@@ -1,0 +1,13 @@
+2026/10/25 17:42:58 OK   00001_initial_schema.sql (184.36ms)
+2026/10/25 17:42:58 OK   00002_autovacuum_tuning.sql (5.51ms)
+2026/10/25 17:42:58 OK   00003_audit_log.sql (23.64ms)
+2026/10/25 17:42:58 OK   00004_job_trace_id.sql (2.81ms)
+2026/10/25 17:42:58 OK   00005_claim_probe_index.sql (16.23ms)
+2026/10/25 17:42:58 OK   00006_terminal_retention_index.sql (9.07ms)
+2026/10/25 17:42:58 goose: successfully migrated database to version: 6
+2026/10/25 17:42:58 INFO job enqueued job_id=c29df974-e091-42ef-84cd-4e8c87bdda4e trace_id=15277fbb89966832da4f88c80dd1d487 tenant_id=f9af2de6-b734-41c6-9910-5fbec56463bc queue=default idempotent_replay=false
+--- FAIL: TestAuditLogRecordsControlPlaneActionsOnly (0.42s)
+    security_test.go:281: want exactly 1 audit entry (the successful cancel), got 0: []
+FAIL
+FAIL	github.com/SGVARDHANVIKRANTHREDDY/queueforge/tests/security	0.440s
+FAIL

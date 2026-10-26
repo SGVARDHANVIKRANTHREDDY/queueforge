@@ -1,0 +1,36 @@
+== upgrade / rollback drill 2026-10-26T06:14:26Z on commit d9ce8b6 ==
+WARNING: uncommitted changes exist; the drill builds from the COMMITTED state only.
+-- 0. building images from the committed tree (first build takes a few minutes)
+images built in 43.3 s
+-- 1. baseline: PREVIOUS release on a fresh database
+2026/10/26 06:15:13 OK   00001_initial_schema.sql (100.08ms)
+2026/10/26 06:15:13 OK   00002_autovacuum_tuning.sql (3.51ms)
+2026/10/26 06:15:13 OK   00003_audit_log.sql (11.49ms)
+2026/10/26 06:15:13 OK   00004_job_trace_id.sql (1.68ms)
+2026/10/26 06:15:13 OK   00005_claim_probe_index.sql (7.93ms)
+2026/10/26 06:15:13 OK   00006_terminal_retention_index.sql (4.69ms)
+2026/10/26 06:15:13 goose: successfully migrated database to version: 6
+schema version after the old release's migrations: 6
+-- 2. start continuous client traffic (retries each batch with the SAME idempotency key until accepted)
+  [baseline, previous release] jobs succeeded: 0 -> 380 during 12 s
+-- 3. EXPAND: run the NEW release's migration while the OLD code is still serving traffic
+2026/10/26 06:15:29 OK   00007_drill_add_nullable_column.sql (3.45ms)
+2026/10/26 06:15:29 goose: successfully migrated database to version: 7
+UPGRADE_DRILL_RESULT migrate_new_seconds=0.6 schema_version_before=6 schema_version_after=7
+  [OLD code running on the NEW schema] jobs succeeded: 450 -> 820 during 12 s
+-- 4. DEPLOY: replace the worker, then the API, with the NEW release
+UPGRADE_DRILL_RESULT api_downtime_upgrade_seconds=1.4
+  [NEW release] jobs succeeded: 860 -> 1200 during 12 s
+-- 5. ROLLBACK: put the OLD code back while the new column still exists
+UPGRADE_DRILL_RESULT api_downtime_rollback_seconds=1.5 schema_version_during_rollback=7
+  [OLD code after rollback] jobs succeeded: 1260 -> 1640 during 12 s
+-- 6. FAILED MIGRATION: a release whose migration breaks halfway
+migrate exit code: 1 (must be non-zero); last lines:
+    Applying database migrations...
+    Migration failed: failed to run goose up: ERROR 00008_drill_broken_migration.sql: failed to run SQL migration: failed to execute SQL query "SELECT * FROM drill_table_that_does_not_exist;": ERROR: relation "drill_table_that_does_not_exist" does not exist (SQLSTATE 42P01)
+UPGRADE_DRILL_RESULT failed_migration_exit_code=1 schema_version_after=7 partial_column_left_behind=0
+  [running system after the failed migration] jobs succeeded: 1680 -> 2060 during 12 s
+-- 7. stop traffic, let everything finish, verify nothing was lost, duplicated or stranded
+UPGRADE_DRILL_RESULT batches_sent=207 jobs_expected=2070 batches_that_needed_retries=0
+UPGRADE_DRILL_RESULT jobs_in_db=2070 succeeded=2070 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 not_exactly_one_success=0
+UPGRADE_DRILL_RESULT verdict=PASS

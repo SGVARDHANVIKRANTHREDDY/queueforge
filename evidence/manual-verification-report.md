@@ -2045,7 +2045,9 @@ The three required consecutive main-branch hosted runs are green:
 The PostgreSQL outage test was then run five times with configured stop/start
 commands using Docker's local API from a Linux test container. Every run
 passed both the short commit-retry scenario and the long lease-recovery
-scenario:
+scenario. The short-outage reruns varied from 10 to 14 in this five-run
+sample, and the combined earlier and current samples range from 0 to 16;
+short outages are therefore not always absorbed without re-execution.
 
     run 1: short reruns=14, long reruns=16, duration=71.90s
     run 2: short reruns=14, long reruns=16, duration=61.54s
@@ -2060,6 +2062,9 @@ reported 16 reruns every time. The complete verbose output is preserved in
 [postgres-outage-20261025-five-runs.txt](./postgres-outage-20261025-five-runs.txt).
 
 The upgrade/rollback drill was intentionally skipped per request.
+
+The canonical hosted CI run for commit `5516d6a` is `40173597933`; the raw
+run list above is retained as the source of truth.
 ## kind Kubernetes validation (2026-10-26)
 
 The Kubernetes validation was run in a disposable `kind` cluster named
@@ -2074,11 +2079,11 @@ Environment:
 - kindest/node:v1.37.0
 
 Cluster creation, image loading, and application of a temporary local
-PostgreSQL overlay succeeded. PostgreSQL reached `1/1 Running`. The first
-API and worker rollout failed with `ImagePullBackOff` because the
-production-shaped manifest uses `imagePullPolicy: Always` for local image
-names. The local overlay changed this to `IfNotPresent` and corrected the
-worker image.
+PostgreSQL overlay succeeded. PostgreSQL reached `1/1 Running`. The first API and worker rollout failed with `ImagePullBackOff` because the
+temporary local overlay substituted `:latest` image names. Kubernetes defaults
+those tags to `imagePullPolicy: Always`; the production-shaped manifest did
+not explicitly set `Always`. The local overlay changed the policy to
+`IfNotPresent` and corrected the worker image.
 
 The next blocker was Kubernetes rejecting the image's symbolic `qf` user under
 the manifest's `runAsNonRoot: true` setting:
@@ -2118,6 +2123,20 @@ Both shell scripts passed `bash -n` and retain LF endings.
 
 ### Three-node kind drill
 
+The first attempt on commit `3603633` failed at the drain step because the
+unmanaged `qf-load` pod landed on the node selected for draining. Kubernetes
+correctly refused to evict a pod with no controller:
+
+```text
+KIND_DRILL_RESULT verdict=FAIL reason=node drain failed or was blocked
+cannot delete Pods that declare no controller (use --force to override): queueforge/qf-load
+```
+
+The complete raw output is preserved in
+[kind-drill-20261027T064522Z.txt](./kind-drill-20261027T064522Z.txt). The
+drill was corrected by pinning the load pod to the database worker, which is
+not the node drained by the test.
+
 The corrected drill ran on commit `cc3516f` in a disposable three-node
 `kind` cluster. The complete raw output is in
 [kind-drill-20261027T064831Z.txt](./kind-drill-20261027T064831Z.txt).
@@ -2128,18 +2147,26 @@ Results:
 KIND_DRILL_RESULT cluster_ready_seconds=42.0 nodes=3
 KIND_DRILL_RESULT rollout_to_ready_seconds=6.3 api_ready=2 worker_ready=2
 KIND_DRILL_RESULT api_pod_kill_recovery_seconds=7.1
-KIND_DRILL_RESULT worker_hard_kill_recovery_seconds=7.1
+KIND_DRILL_RESULT worker_container_kill_recovery_seconds=7.1
 KIND_DRILL_RESULT node_drain_seconds=2.3
 KIND_DRILL_RESULT batches_sent=486 jobs_expected=4860 batches_that_needed_retries=1
 KIND_DRILL_RESULT jobs_in_db=4860 succeeded=4860 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 not_exactly_one_success=0 jobs_rerun_after_disruptions=0
 KIND_DRILL_RESULT verdict=PASS
 ```
 
+The earlier result above used forced pod deletion, not a runtime-level kill.
+The updated drill uses `crictl stop --timeout 0` inside the kind node to stop
+the worker container without Kubernetes graceful termination. It requires the
+worker lease to expire and be recovered, and the final integrity check now
+requires at least one re-run job.
+
 The drill verified startup under the numeric `runAsUser: 10001` security
 context, startup probes, the allow-list network policies, Service traffic,
-API pod replacement, hard worker termination, and a PDB-protected drain of
+API pod replacement, forced pod deletion with graceful completion within the
+runtime's short stop window, and a PDB-protected drain of
 `qf-drill-worker2`. PostgreSQL and the load pod were kept on the other worker
-so the drain could complete.
+so the drain could complete. This first pass did not prove Kubernetes
+container-level crash recovery because it produced no re-run jobs.
 
 ### Dense upgrade, rollback, and failed-migration drill
 

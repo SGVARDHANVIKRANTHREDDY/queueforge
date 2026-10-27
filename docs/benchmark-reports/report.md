@@ -87,7 +87,7 @@ Claim query latency, median of 7:
 | Scenario | Test | Result |
 |---|---|---|
 | Worker `kill -9` mid-job | `TestChaos_RealKill9_WorkerProcessRecovery` (real binary, separate process) | recovered **3.1 s** after the kill (lease 3 s); exactly 2 attempts on different workers; 0 leaks |
-| Postgres stopped ~10 s mid-workload | `TestChaos_PostgresOutageMidWorkload` (opt-in) | five runs, each with short and long outage scenarios; short-outage reruns ranged from 0 to 16, long-outage reruns were 16 every time; all runs had 0 dead, 0 leaks, 0 outstanding, 0 unfinished attempts, 0 double successes, and exactly one success per job |
+| Postgres stopped ~10 s mid-workload | `TestChaos_PostgresOutageMidWorkload` (opt-in) | ten runs across two evidence batches, each with short and long outage scenarios; short-outage reruns ranged from 0 to 16, long-outage reruns were 16 every time. Short outages are not always absorbed without re-execution. All runs had 0 dead, 0 leaks, 0 outstanding, 0 unfinished attempts, 0 double successes, and exactly one success per job |
 | Network faults via fault-injecting proxy: +250 ms latency, 4 connection resets, 8 s black hole (longer than the lease) | `TestChaos_NetworkFaults...` | all 240 jobs succeed; 0 dead, 0 leaks. **Wasted executions ranged from 3 to 16 across 11 runs** (the earlier 3-7 result was a best case). The hard bound is tenant concurrency 16 plus a margin of 4, reflecting at-least-once duplicate work during a partition longer than the lease. |
 | Poison row in lease recovery / retention | regression tests | healthy rows still processed; failure reported |
 | Stale worker completes after losing its lease | property + chaos | rejected (`ErrLeaseLost`) |

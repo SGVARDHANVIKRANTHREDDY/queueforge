@@ -153,12 +153,21 @@ wait_ready_replicas queueforge-api 2 180 || fail "API did not return to 2 ready 
 echo "KIND_DRILL_RESULT api_pod_kill_recovery_seconds=$(secs "$t" "$(now)")"
 progress_during "after API pod kill"
 
-echo "-- 6. HARD-kill one worker pod (no graceful shutdown: leases must be recovered)"
-victim=$(kubectl -n "$NS" get pods -l app=queueforge-worker -o name | sed -n 1p)
-t=$(now); kubectl -n "$NS" delete "$victim" --grace-period=0 --force >/dev/null 2>&1
-wait_ready_replicas queueforge-worker 2 180 || fail "workers did not return to 2 ready replicas after a hard kill"
-echo "KIND_DRILL_RESULT worker_hard_kill_recovery_seconds=$(secs "$t" "$(now)")"
-progress_during "after worker hard kill"
+echo "-- 6. HARD-kill the worker container (SIGKILL at the container runtime, no grace)"
+victim=$(kubectl -n "$NS" get pods -l app=queueforge-worker -o jsonpath='{.items[0].metadata.name}')
+node=$(kubectl -n "$NS" get pod "$victim" -o jsonpath='{.spec.nodeName}')
+cid=$(docker exec "$node" crictl ps --label io.kubernetes.pod.name="$victim" --name worker -q | sed -n 1p)
+[[ -n "$cid" ]] || fail "could not find the worker container on $node"
+before=$(kubectl -n "$NS" get pod "$victim" -o jsonpath='{.status.containerStatuses[0].restartCount}')
+t=$(now); docker exec "$node" crictl stop --timeout 0 "$cid" >/dev/null
+for _ in $(seq 1 60); do
+  current=$(kubectl -n "$NS" get pod "$victim" -o jsonpath='{.status.containerStatuses[0].restartCount}' 2>/dev/null || echo 0)
+  [[ "$current" -gt "$before" ]] && break
+  sleep 1
+done
+wait_ready_replicas queueforge-worker 2 180 || fail "workers did not return to 2 ready replicas after the container kill"
+echo "KIND_DRILL_RESULT worker_container_kill_recovery_seconds=$(secs "$t" "$(now)")"
+progress_during "after worker container kill"
 
 echo "-- 7. drain a node while traffic flows (PodDisruptionBudgets must hold, drain must succeed)"
 t=$(now)
@@ -187,4 +196,5 @@ rerun=$(sql "SELECT count(*) FROM jobs WHERE attempts_started > 1" | tr -d '[:sp
 echo "KIND_DRILL_RESULT jobs_in_db=$total succeeded=$ok dead=$dead busy_slots=$busy unfinished_attempts=$unfinished outstanding=$outstanding not_exactly_one_success=$not_one jobs_rerun_after_disruptions=$rerun"
 [[ "$total" == "$EXPECT" ]] || fail "job count mismatch: submitted $EXPECT, database has $total"
 [[ "$ok" == "$EXPECT" && "$dead" == "0" && "$busy" == "0" && "$unfinished" == "0" && "$outstanding" == "0" && "$not_one" == "0" ]] || fail "integrity check failed"
+[[ "$rerun" -ge 1 ]] || fail "the worker container kill left no re-run jobs: the kill was not hard"
 echo "KIND_DRILL_RESULT verdict=PASS"

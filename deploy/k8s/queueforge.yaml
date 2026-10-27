@@ -32,7 +32,9 @@ type: Opaque
 stringData:
   # App role (DML only) and migration role: see deploy/sql/least_privilege.sql
   QF_DATABASE_URL: "postgres://qf_app:CHANGE_ME@postgres.example.internal:5432/queueforge?sslmode=verify-full"
-  QF_MIGRATE_DATABASE_URL: "postgres://qf_migrate:CHANGE_ME@postgres.example.internal:5432/queueforge?sslmode=verify-full"
+  # OPTIONAL: only if you created the separate qf_migrate role (deploy/sql/least_privilege.sql). When this is set the
+  # API uses it for migrations INSTEAD of QF_DATABASE_URL, so a placeholder left here breaks startup. Uncomment deliberately.
+  # QF_MIGRATE_DATABASE_URL: "postgres://qf_migrate:CHANGE_ME@postgres.example.internal:5432/queueforge?sslmode=verify-full"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -50,10 +52,11 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9090"
     spec:
-      securityContext: { runAsNonRoot: true, seccompProfile: { type: RuntimeDefault } }
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001, seccompProfile: { type: RuntimeDefault } }
       containers:
         - name: api
-          image: ghcr.io/YOUR_ORG/queueforge:1.0.0   # pin an exact tag or digest, never :latest
+          image: ghcr.io/YOUR_ORG/queueforge:1.0.0   # pin an exact tag or digest; with :latest Kubernetes would default to pulling Always
+          imagePullPolicy: IfNotPresent
           command: ["/app/api"]
           envFrom:
             - configMapRef: { name: queueforge-config }
@@ -61,6 +64,9 @@ spec:
           ports:
             - { name: http, containerPort: 8080 }
             - { name: ops, containerPort: 9090 }
+          # Migrations and the database connection happen before the port opens: allow up to 3 minutes
+          # before liveness takes over, instead of killing a slow start after 30 seconds.
+          startupProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 5, failureThreshold: 36 }
           readinessProbe: { httpGet: { path: /readyz, port: http }, periodSeconds: 5, failureThreshold: 3 }
           livenessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 10, failureThreshold: 3 }
           resources:
@@ -95,16 +101,18 @@ spec:
         prometheus.io/port: "9090"
     spec:
       terminationGracePeriodSeconds: 45     # must exceed QF_SHUTDOWN_TIMEOUT so in-flight jobs can drain
-      securityContext: { runAsNonRoot: true, seccompProfile: { type: RuntimeDefault } }
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001, seccompProfile: { type: RuntimeDefault } }
       containers:
         - name: worker
           image: ghcr.io/YOUR_ORG/queueforge:1.0.0
+          imagePullPolicy: IfNotPresent
           command: ["/app/worker"]
           envFrom:
             - configMapRef: { name: queueforge-config }
             - secretRef: { name: queueforge-secrets }
           ports:
             - { name: ops, containerPort: 9090 }
+          startupProbe: { httpGet: { path: /healthz, port: ops }, periodSeconds: 5, failureThreshold: 36 }
           readinessProbe: { httpGet: { path: /readyz, port: ops }, periodSeconds: 5, failureThreshold: 3 }
           livenessProbe: { httpGet: { path: /healthz, port: ops }, periodSeconds: 10, failureThreshold: 6 }
           resources:
@@ -137,10 +145,37 @@ spec:
     - type: Resource
       resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
 ---
-# Only the ingress controller may reach the API; workers need no inbound traffic except Prometheus.
+# Network policies. The first denies all ingress; the next two re-open exactly what is needed.
+# NOTE: NetworkPolicy is only enforced if your CNI supports it. Tighten the API rule to your ingress
+# controller's namespace (add a namespaceSelector with its label) before relying on it.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata: { name: queueforge-default-deny-ingress, namespace: queueforge }
 spec:
   podSelector: {}
   policyTypes: ["Ingress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: queueforge-allow-api-http, namespace: queueforge }
+spec:
+  podSelector: { matchLabels: { app: queueforge-api } }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector: {}   # any namespace: restrict to your ingress controller's namespace in production
+      ports:
+        - { protocol: TCP, port: 8080 }
+---
+# Metrics/health on 9090 are reachable only from pods in this namespace (put your Prometheus here, or add its namespace).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: queueforge-allow-ops-in-namespace, namespace: queueforge }
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - { protocol: TCP, port: 9090 }

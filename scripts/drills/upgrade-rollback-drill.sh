@@ -20,7 +20,7 @@
 #
 # Run in Git Bash, WSL or Linux from anywhere inside the repo:  bash scripts/drills/upgrade-rollback-drill.sh
 # Takes about 10 to 20 minutes (three image builds the first time). Env: KEEP=1 keeps containers for
-# inspection; BAD_MIGRATION=0 skips the failed-migration phase; PHASE_SECONDS (default 12) is how long
+# inspection; LOAD_SLEEP (default 0.1) is the pause between client batches: smaller means denser traffic; BAD_MIGRATION=0 skips the failed-migration phase; PHASE_SECONDS (default 12) is how long
 # traffic runs in each phase.
 # This is a LOCAL drill: it proves the procedure and the compatibility; real deployments still need their
 # own rehearsal with real data volumes.
@@ -117,7 +117,7 @@ start_worker "$OLD"
 echo "-- 2. start continuous client traffic (retries each batch with the SAME idempotency key until accepted)"
 JOB='{"task_type":"test.sleep","payload":{"ms":200}}'
 BODY='{"jobs":['; for i in $(seq 1 10); do BODY+="$JOB"; (( i < 10 )) && BODY+=','; done; BODY+=']}'
-docker run -d --name "$LOAD" --network "$NET" -e KEY="$KEY" -e BODY="$BODY" -e API_HOST="$API" --entrypoint sh curlimages/curl:8.10.1 -c '
+docker run -d --name "$LOAD" --network "$NET" -e KEY="$KEY" -e BODY="$BODY" -e API_HOST="$API" -e LOAD_SLEEP="${LOAD_SLEEP:-0.1}" --entrypoint sh curlimages/curl:8.10.1 -c '
 i=0
 while [ ! -f /tmp/stop ]; do
   i=$((i+1)); tries=0
@@ -128,7 +128,7 @@ while [ ! -f /tmp/stop ]; do
     tries=$((tries+1)); sleep 0.2
   done
   echo "SENT $i tries=$tries"
-  sleep 0.3
+  sleep "$LOAD_SLEEP"
 done
 echo "DONE $i"
 ' >/dev/null

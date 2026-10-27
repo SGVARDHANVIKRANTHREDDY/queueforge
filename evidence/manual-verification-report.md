@@ -2168,6 +2168,29 @@ runtime's short stop window, and a PDB-protected drain of
 so the drain could complete. This first pass did not prove Kubernetes
 container-level crash recovery because it produced no re-run jobs.
 
+### Runtime-level worker kill rerun
+
+The kind drill was then updated to stop the worker container directly inside
+the kind node with `crictl stop --timeout 0`, rather than deleting the pod
+object. The final integrity check requires at least one re-run job. The
+complete raw output is in
+[kind-drill-20261027T130626Z.txt](./kind-drill-20261027T130626Z.txt).
+
+```text
+KIND_DRILL_RESULT cluster_ready_seconds=48.7 nodes=3
+KIND_DRILL_RESULT rollout_to_ready_seconds=6.2 api_ready=2 worker_ready=2
+KIND_DRILL_RESULT api_pod_kill_recovery_seconds=6.9
+KIND_DRILL_RESULT worker_container_kill_recovery_seconds=6.1
+KIND_DRILL_RESULT node_drain_seconds=1.2
+KIND_DRILL_RESULT batches_sent=559 jobs_expected=5590 batches_that_needed_retries=0
+KIND_DRILL_RESULT jobs_in_db=5590 succeeded=5590 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 not_exactly_one_success=0 jobs_rerun_after_disruptions=2
+KIND_DRILL_RESULT verdict=PASS
+```
+
+This run proves Kubernetes container-level crash recovery for this workload:
+two jobs were re-run after the runtime kill, and all 5,590 submitted jobs
+still succeeded exactly once with no dead jobs or leaked state.
+
 ### Dense upgrade, rollback, and failed-migration drill
 
 The replacement drill ran on commit `cc3516f` with

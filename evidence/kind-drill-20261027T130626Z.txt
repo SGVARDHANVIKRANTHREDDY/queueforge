@@ -1,0 +1,77 @@
+== kind drill 2026-10-27T13:06:26Z on commit cda254f, image queueforge:local ==
+-- 1. create a 3-node cluster and load the image
+Creating cluster "qf-drill" ...
+ • Ensuring node image (kindest/node:v1.37.0) 🖼️  ...
+ ✓ Ensuring node image (kindest/node:v1.37.0) 🖼️
+ • Preparing nodes 📦 📦 📦   ...
+ ✓ Preparing nodes 📦 📦 📦 
+ • Writing configuration 📜  ...
+ ✓ Writing configuration 📜
+ • Starting control-plane 🕹️  ...
+ ✓ Starting control-plane 🕹️
+ • Installing CNI 🔌  ...
+ ✓ Installing CNI 🔌
+ • Installing StorageClass 💾  ...
+ ✓ Installing StorageClass 💾
+ • Joining worker nodes 🚜  ...
+ ✓ Joining worker nodes 🚜
+ • Waiting ≤ 3m0s for control-plane = Ready ⏳  ...
+ ✓ Waiting ≤ 3m0s for control-plane = Ready ⏳
+ • Ready after 7s 💚
+Set kubectl context to "kind-qf-drill"
+You can now use your cluster with:
+
+kubectl cluster-info --context kind-qf-drill
+
+Not sure what to do next? 😅  Check out https://kind.sigs.k8s.io/docs/user/quick-start/
+Image: "queueforge:local" with ID "sha256:5159ddf163cf1e384e8fdc9861eed2b8a203401d646bec0cb3f24bfb75d30ea0" not yet present on node "qf-drill-control-plane", loading...
+Image: "queueforge:local" with ID "sha256:5159ddf163cf1e384e8fdc9861eed2b8a203401d646bec0cb3f24bfb75d30ea0" not yet present on node "qf-drill-worker", loading...
+Image: "queueforge:local" with ID "sha256:5159ddf163cf1e384e8fdc9861eed2b8a203401d646bec0cb3f24bfb75d30ea0" not yet present on node "qf-drill-worker2", loading...
+KIND_DRILL_RESULT cluster_ready_seconds=48.7 nodes=3
+-- 2. PostgreSQL for the drill (pinned to node qf-drill-worker so draining the other node never touches it)
+namespace/queueforge created
+deployment.apps/queueforge-postgres created
+service/queueforge-postgres created
+networkpolicy.networking.k8s.io/allow-postgres-in-namespace created
+Waiting for deployment "queueforge-postgres" rollout to finish: 0 of 1 updated replicas are available...
+deployment "queueforge-postgres" successfully rolled out
+-- 3. apply the REAL manifest (only the image and the database URL are substituted)
+namespace/queueforge unchanged
+configmap/queueforge-config created
+secret/queueforge-secrets created
+deployment.apps/queueforge-api created
+service/queueforge-api created
+deployment.apps/queueforge-worker created
+poddisruptionbudget.policy/queueforge-api created
+poddisruptionbudget.policy/queueforge-worker created
+horizontalpodautoscaler.autoscaling/queueforge-api created
+networkpolicy.networking.k8s.io/queueforge-default-deny-ingress created
+networkpolicy.networking.k8s.io/queueforge-allow-api-http created
+networkpolicy.networking.k8s.io/queueforge-allow-ops-in-namespace created
+Waiting for deployment "queueforge-api" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "queueforge-api" rollout to finish: 1 of 2 updated replicas are available...
+deployment "queueforge-api" successfully rolled out
+deployment "queueforge-worker" successfully rolled out
+KIND_DRILL_RESULT rollout_to_ready_seconds=6.2 api_ready=2 worker_ready=2
+-- 4. end to end: tenant, key, traffic through the Service from inside the cluster
+  [baseline through the Service] jobs succeeded: 0 -> 835 during 12 s
+-- 5. kill one API pod
+KIND_DRILL_RESULT api_pod_kill_recovery_seconds=6.9
+  [after API pod kill] jobs succeeded: 1385 -> 2314 during 12 s
+-- 6. HARD-kill the worker container (SIGKILL at the container runtime, no grace)
+KIND_DRILL_RESULT worker_container_kill_recovery_seconds=6.1
+  [after worker container kill] jobs succeeded: 2776 -> 3591 during 12 s
+-- 7. drain a node while traffic flows (PodDisruptionBudgets must hold, drain must succeed)
+node/qf-drill-worker2 cordoned
+Warning: ignoring DaemonSet-managed Pods: kube-system/kindnet-7plms, kube-system/kube-proxy-n97tl
+evicting pod queueforge/queueforge-api-c665b77c9-llxqs
+evicting pod queueforge/queueforge-worker-c97b57fb8-x6b5w
+pod/queueforge-worker-c97b57fb8-x6b5w evicted
+pod/queueforge-api-c665b77c9-llxqs evicted
+node/qf-drill-worker2 drained
+KIND_DRILL_RESULT node_drain_seconds=1.2
+  [after node drain] jobs succeeded: 4124 -> 4937 during 12 s
+-- 8. stop traffic and verify nothing was lost, duplicated or stranded
+KIND_DRILL_RESULT batches_sent=559 jobs_expected=5590 batches_that_needed_retries=0
+KIND_DRILL_RESULT jobs_in_db=5590 succeeded=5590 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 not_exactly_one_success=0 jobs_rerun_after_disruptions=2
+KIND_DRILL_RESULT verdict=PASS

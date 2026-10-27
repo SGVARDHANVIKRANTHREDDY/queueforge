@@ -1,0 +1,238 @@
+== kind drill 2026-10-27T06:45:22Z on commit 3603633, image queueforge:local ==
+-- 1. create a 3-node cluster and load the image
+Creating cluster "qf-drill" ...
+ • Ensuring node image (kindest/node:v1.37.0) 🖼️  ...
+ ✓ Ensuring node image (kindest/node:v1.37.0) 🖼️
+ • Preparing nodes 📦 📦 📦   ...
+ ✓ Preparing nodes 📦 📦 📦 
+ • Writing configuration 📜  ...
+ ✓ Writing configuration 📜
+ • Starting control-plane 🕹️  ...
+ ✓ Starting control-plane 🕹️
+ • Installing CNI 🔌  ...
+ ✓ Installing CNI 🔌
+ • Installing StorageClass 💾  ...
+ ✓ Installing StorageClass 💾
+ • Joining worker nodes 🚜  ...
+ ✓ Joining worker nodes 🚜
+ • Waiting ≤ 3m0s for control-plane = Ready ⏳  ...
+ ✓ Waiting ≤ 3m0s for control-plane = Ready ⏳
+ • Ready after 8s 💚
+Set kubectl context to "kind-qf-drill"
+You can now use your cluster with:
+
+kubectl cluster-info --context kind-qf-drill
+
+Not sure what to do next? 😅  Check out https://kind.sigs.k8s.io/docs/user/quick-start/
+Image: "queueforge:local" with ID "sha256:5159ddf163cf1e384e8fdc9861eed2b8a203401d646bec0cb3f24bfb75d30ea0" not yet present on node "qf-drill-worker2", loading...
+Image: "queueforge:local" with ID "sha256:5159ddf163cf1e384e8fdc9861eed2b8a203401d646bec0cb3f24bfb75d30ea0" not yet present on node "qf-drill-control-plane", loading...
+Image: "queueforge:local" with ID "sha256:5159ddf163cf1e384e8fdc9861eed2b8a203401d646bec0cb3f24bfb75d30ea0" not yet present on node "qf-drill-worker", loading...
+KIND_DRILL_RESULT cluster_ready_seconds=44.6 nodes=3
+-- 2. PostgreSQL for the drill (pinned to node qf-drill-worker so draining the other node never touches it)
+namespace/queueforge created
+deployment.apps/queueforge-postgres created
+service/queueforge-postgres created
+networkpolicy.networking.k8s.io/allow-postgres-in-namespace created
+Waiting for deployment "queueforge-postgres" rollout to finish: 0 of 1 updated replicas are available...
+deployment "queueforge-postgres" successfully rolled out
+-- 3. apply the REAL manifest (only the image and the database URL are substituted)
+namespace/queueforge unchanged
+configmap/queueforge-config created
+secret/queueforge-secrets created
+deployment.apps/queueforge-api created
+service/queueforge-api created
+deployment.apps/queueforge-worker created
+poddisruptionbudget.policy/queueforge-api created
+poddisruptionbudget.policy/queueforge-worker created
+horizontalpodautoscaler.autoscaling/queueforge-api created
+networkpolicy.networking.k8s.io/queueforge-default-deny-ingress created
+networkpolicy.networking.k8s.io/queueforge-allow-api-http created
+networkpolicy.networking.k8s.io/queueforge-allow-ops-in-namespace created
+Waiting for deployment "queueforge-api" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "queueforge-api" rollout to finish: 1 of 2 updated replicas are available...
+deployment "queueforge-api" successfully rolled out
+deployment "queueforge-worker" successfully rolled out
+KIND_DRILL_RESULT rollout_to_ready_seconds=6.4 api_ready=2 worker_ready=2
+-- 4. end to end: tenant, key, traffic through the Service from inside the cluster
+  [baseline through the Service] jobs succeeded: 0 -> 816 during 12 s
+-- 5. kill one API pod
+KIND_DRILL_RESULT api_pod_kill_recovery_seconds=7.1
+  [after API pod kill] jobs succeeded: 1350 -> 2204 during 12 s
+-- 6. HARD-kill one worker pod (no graceful shutdown: leases must be recovered)
+KIND_DRILL_RESULT worker_hard_kill_recovery_seconds=7.2
+  [after worker hard kill] jobs succeeded: 2756 -> 3616 during 12 s
+-- 7. drain a node while traffic flows (PodDisruptionBudgets must hold, drain must succeed)
+node/qf-drill-worker2 cordoned
+error: unable to drain node "qf-drill-worker2" due to error: cannot delete Pods that declare no controller (use --force to override): queueforge/qf-load, continuing command...
+There are pending nodes to be drained:
+ qf-drill-worker2
+cannot delete Pods that declare no controller (use --force to override): queueforge/qf-load
+KIND_DRILL_RESULT verdict=FAIL reason=node drain failed or was blocked
+================ DIAGNOSTICS ================
+NAME                                   READY   STATUS    RESTARTS   AGE    IP           NODE               NOMINATED NODE   READINESS GATES
+qf-load                                1/1     Running   0          63s    10.244.1.4   qf-drill-worker2   <none>           <none>
+queueforge-api-c665b77c9-28jgd         1/1     Running   0          40s    10.244.2.5   qf-drill-worker    <none>           <none>
+queueforge-api-c665b77c9-z9wsh         1/1     Running   0          71s    10.244.1.2   qf-drill-worker2   <none>           <none>
+queueforge-postgres-6c7674df57-ww8d8   1/1     Running   0          113s   10.244.2.2   qf-drill-worker    <none>           <none>
+queueforge-worker-c97b57fb8-xj7rc      1/1     Running   0          20s    10.244.2.6   qf-drill-worker    <none>           <none>
+queueforge-worker-c97b57fb8-zkhc9      1/1     Running   0          71s    10.244.1.3   qf-drill-worker2   <none>           <none>
+---- pod/queueforge-api-c665b77c9-28jgd: container state and events
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  40s   default-scheduler  Successfully assigned queueforge/queueforge-api-c665b77c9-28jgd to qf-drill-worker
+  Normal  Pulled     39s   kubelet            spec.containers{api}: Container image "queueforge:local" already present on machine and can be accessed by the pod
+  Normal  Created    39s   kubelet            spec.containers{api}: Container created
+  Normal  Started    39s   kubelet            spec.containers{api}: Container started
+---- pod/queueforge-api-c665b77c9-28jgd: previous container log (tail)
+Error from server (BadRequest): previous terminated container "api" in pod "queueforge-api-c665b77c9-28jgd" not found
+{"time":"2026-10-27T06:47:53.691756006Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:54.099402311Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:54.236315322Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:54.515386905Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:54.795123032Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:54.931444545Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:55.07208853Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:55.216562385Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:55.520201996Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:55.825196029Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:57.223605606Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:57.367658194Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:57.639640039Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:57.924373479Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:58.201227477Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:58.771677563Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:58.926128236Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:59.075246874Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:59.362974728Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:59.775493964Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:00.187650262Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:00.318559236Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:00.467593108Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:00.601618667Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:00.736754559Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:01.149613258Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:01.41917964Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:01.694382443Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:01.982708628Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:02.116314876Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+---- pod/queueforge-api-c665b77c9-z9wsh: container state and events
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  72s   default-scheduler  Successfully assigned queueforge/queueforge-api-c665b77c9-z9wsh to qf-drill-worker2
+  Normal  Pulled     71s   kubelet            spec.containers{api}: Container image "queueforge:local" already present on machine and can be accessed by the pod
+  Normal  Created    71s   kubelet            spec.containers{api}: Container created
+  Normal  Started    71s   kubelet            spec.containers{api}: Container started
+---- pod/queueforge-api-c665b77c9-z9wsh: previous container log (tail)
+Error from server (BadRequest): previous terminated container "api" in pod "queueforge-api-c665b77c9-z9wsh" not found
+{"time":"2026-10-27T06:47:54.376144676Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:54.656863302Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:55.373306111Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:55.66428564Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:55.980497868Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:56.12422494Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:56.292456394Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:56.446894019Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:56.595426726Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:56.755747184Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:56.919553273Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:57.070378472Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:57.504408196Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:57.784678898Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:58.061425899Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:58.339789016Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:58.482080015Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:58.618708508Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:59.227191741Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:59.504466446Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:59.64190068Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:47:59.909518674Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:00.053996501Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:00.87609748Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:01.013862261Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:01.285558121Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:01.56015353Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:01.834210863Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:02.391694049Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+{"time":"2026-10-27T06:48:02.525314373Z","level":"INFO","msg":"batch enqueued","tenant_id":"76957763-dd3c-48b6-9130-117288d89ed3","count":10,"idempotent_replay":false}
+---- pod/queueforge-worker-c97b57fb8-xj7rc: container state and events
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  21s   default-scheduler  Successfully assigned queueforge/queueforge-worker-c97b57fb8-xj7rc to qf-drill-worker
+  Normal  Pulled     20s   kubelet            spec.containers{worker}: Container image "queueforge:local" already present on machine and can be accessed by the pod
+  Normal  Created    20s   kubelet            spec.containers{worker}: Container created
+  Normal  Started    20s   kubelet            spec.containers{worker}: Container started
+---- pod/queueforge-worker-c97b57fb8-xj7rc: previous container log (tail)
+Error from server (BadRequest): previous terminated container "worker" in pod "queueforge-worker-c97b57fb8-xj7rc" not found
+{"time":"2026-10-27T06:48:02.564425092Z","level":"INFO","msg":"job started","job_id":"6aea1569-58f9-445a-9cd4-f1ef9d3269e3","trace_id":"9f16f670bde7c998f2c61fe2f8ab01d7","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.564507684Z","level":"INFO","msg":"job started","job_id":"8b8b38a7-3a92-4f60-b10b-d9b11e71aafc","trace_id":"9f16f670bde7c998f2c61fe2f8ab01d7","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.623092989Z","level":"INFO","msg":"job handler finished","job_id":"0e3514a7-55f0-4f17-a9a4-539dc9103a4f","trace_id":"453ec2038e127eda204535e80fe6943c","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:02.676397127Z","level":"INFO","msg":"job handler finished","job_id":"bf8ba256-0f06-4023-8a9c-f0b1cf08bbad","trace_id":"453ec2038e127eda204535e80fe6943c","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:02.676425233Z","level":"INFO","msg":"job handler finished","job_id":"7dc98f6c-e124-4fda-ad69-e45e749c36d9","trace_id":"453ec2038e127eda204535e80fe6943c","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:02.688253192Z","level":"INFO","msg":"job started","job_id":"2bac6457-2439-4188-bdf6-9173604b1471","trace_id":"696cb9beee13a0e2373d807b564bbb35","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.688261347Z","level":"INFO","msg":"job started","job_id":"5087141a-c3a8-4a11-a353-3a7eb633bb67","trace_id":"696cb9beee13a0e2373d807b564bbb35","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.701815356Z","level":"INFO","msg":"job started","job_id":"8feb4c02-37cd-4504-8854-efeaffa0ffbb","trace_id":"696cb9beee13a0e2373d807b564bbb35","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.758436159Z","level":"INFO","msg":"job handler finished","job_id":"7bcc9e4f-e976-4da4-86a5-9c7051c1a5b4","trace_id":"9f16f670bde7c998f2c61fe2f8ab01d7","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":201,"failed":false}
+{"time":"2026-10-27T06:48:02.764996657Z","level":"INFO","msg":"job handler finished","job_id":"6aea1569-58f9-445a-9cd4-f1ef9d3269e3","trace_id":"9f16f670bde7c998f2c61fe2f8ab01d7","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:02.765068307Z","level":"INFO","msg":"job handler finished","job_id":"8b8b38a7-3a92-4f60-b10b-d9b11e71aafc","trace_id":"9f16f670bde7c998f2c61fe2f8ab01d7","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:02.767578699Z","level":"INFO","msg":"job started","job_id":"bb7e55d1-ed85-424a-a598-a89710e741ce","trace_id":"696cb9beee13a0e2373d807b564bbb35","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.77191863Z","level":"INFO","msg":"job started","job_id":"79cb6f84-1c96-4cee-89d1-0ee76e4174d3","trace_id":"696cb9beee13a0e2373d807b564bbb35","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.829862866Z","level":"INFO","msg":"job started","job_id":"46e9cbef-1d89-43df-882f-0e8b04579ac9","trace_id":"42d945d478563406f0265b8a199dbc7f","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.829889617Z","level":"INFO","msg":"job started","job_id":"07fb8598-bcb8-4159-b1ed-cacbdf8f1129","trace_id":"42d945d478563406f0265b8a199dbc7f","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.888423495Z","level":"INFO","msg":"job handler finished","job_id":"5087141a-c3a8-4a11-a353-3a7eb633bb67","trace_id":"696cb9beee13a0e2373d807b564bbb35","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:02.88844577Z","level":"INFO","msg":"job handler finished","job_id":"2bac6457-2439-4188-bdf6-9173604b1471","trace_id":"696cb9beee13a0e2373d807b564bbb35","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:02.900975766Z","level":"INFO","msg":"job started","job_id":"8f89560d-78e4-4233-b5e6-d9043cf29821","trace_id":"42d945d478563406f0265b8a199dbc7f","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.900977103Z","level":"INFO","msg":"job started","job_id":"e765a515-e2d9-4172-b6c0-50c6a041e6c8","trace_id":"42d945d478563406f0265b8a199dbc7f","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.902226176Z","level":"INFO","msg":"job handler finished","job_id":"8feb4c02-37cd-4504-8854-efeaffa0ffbb","trace_id":"696cb9beee13a0e2373d807b564bbb35","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:02.959166273Z","level":"INFO","msg":"job started","job_id":"73788583-0a6f-4b99-916f-2de485b3ec4c","trace_id":"8644d6d73d7c76214257ce385429b46e","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.959215281Z","level":"INFO","msg":"job started","job_id":"cfc9a24c-cb84-4477-9a2a-a202eeda0500","trace_id":"8644d6d73d7c76214257ce385429b46e","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.959223081Z","level":"INFO","msg":"job started","job_id":"91df178b-c8a9-4eef-bcc2-1184e74a6333","trace_id":"8644d6d73d7c76214257ce385429b46e","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.968496682Z","level":"INFO","msg":"job handler finished","job_id":"bb7e55d1-ed85-424a-a598-a89710e741ce","trace_id":"696cb9beee13a0e2373d807b564bbb35","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:02.972812111Z","level":"INFO","msg":"job handler finished","job_id":"79cb6f84-1c96-4cee-89d1-0ee76e4174d3","trace_id":"696cb9beee13a0e2373d807b564bbb35","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:02.976811379Z","level":"INFO","msg":"job started","job_id":"36cb7b6f-0b91-405e-bb8f-2e5485c9d12a","trace_id":"8644d6d73d7c76214257ce385429b46e","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:02.983944714Z","level":"INFO","msg":"job started","job_id":"30bea861-45c2-4675-89bd-e1007be9678c","trace_id":"8644d6d73d7c76214257ce385429b46e","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+{"time":"2026-10-27T06:48:03.030523543Z","level":"INFO","msg":"job handler finished","job_id":"46e9cbef-1d89-43df-882f-0e8b04579ac9","trace_id":"42d945d478563406f0265b8a199dbc7f","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.030665469Z","level":"INFO","msg":"job handler finished","job_id":"07fb8598-bcb8-4159-b1ed-cacbdf8f1129","trace_id":"42d945d478563406f0265b8a199dbc7f","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.038923365Z","level":"INFO","msg":"job started","job_id":"b63d35ec-3ce9-4517-827c-6cc87a748c77","trace_id":"8644d6d73d7c76214257ce385429b46e","task_type":"test.sleep","attempt":1,"worker_id":"e2f97f87-c2b6-47d4-b5be-82a07ddddd67"}
+---- pod/queueforge-worker-c97b57fb8-zkhc9: container state and events
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  73s   default-scheduler  Successfully assigned queueforge/queueforge-worker-c97b57fb8-zkhc9 to qf-drill-worker2
+  Normal  Pulled     72s   kubelet            spec.containers{worker}: Container image "queueforge:local" already present on machine and can be accessed by the pod
+  Normal  Created    72s   kubelet            spec.containers{worker}: Container created
+  Normal  Started    72s   kubelet            spec.containers{worker}: Container started
+---- pod/queueforge-worker-c97b57fb8-zkhc9: previous container log (tail)
+Error from server (BadRequest): previous terminated container "worker" in pod "queueforge-worker-c97b57fb8-zkhc9" not found
+{"time":"2026-10-27T06:48:03.025523126Z","level":"INFO","msg":"job handler finished","job_id":"4f94e3e7-5888-43a8-b9fe-1548bb6183bf","trace_id":"42d945d478563406f0265b8a199dbc7f","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.034749554Z","level":"INFO","msg":"job started","job_id":"327e8826-f065-4c97-b474-8f84b98cbdc5","trace_id":"8644d6d73d7c76214257ce385429b46e","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.034820844Z","level":"INFO","msg":"job started","job_id":"46d9f0d1-ab9a-4fc2-9c5d-916bf89bb16b","trace_id":"8644d6d73d7c76214257ce385429b46e","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.035946095Z","level":"INFO","msg":"job handler finished","job_id":"f5eaf28c-d4c2-4214-9be7-ad4a4a63b853","trace_id":"42d945d478563406f0265b8a199dbc7f","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.102933965Z","level":"INFO","msg":"job started","job_id":"bf81abd1-df04-4a57-97ca-0602fb1906b6","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.103008661Z","level":"INFO","msg":"job started","job_id":"aecdabe4-8053-447a-9e43-1c5caec93b6c","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.106239132Z","level":"INFO","msg":"job handler finished","job_id":"7e77af54-e4bc-4655-81f5-f42e099e049f","trace_id":"42d945d478563406f0265b8a199dbc7f","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.106263808Z","level":"INFO","msg":"job handler finished","job_id":"14396144-8b19-4c49-9fc2-5fb5896c8cd8","trace_id":"42d945d478563406f0265b8a199dbc7f","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.115398211Z","level":"INFO","msg":"job started","job_id":"391f2cf3-f1c7-4cb9-a794-e4b467d0956c","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.115435777Z","level":"INFO","msg":"job started","job_id":"65e6a11f-2b33-42a5-b99e-77f45e3aad09","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.165786782Z","level":"INFO","msg":"job handler finished","job_id":"cf5cb83b-527a-48d3-8700-780920f66b6b","trace_id":"8644d6d73d7c76214257ce385429b46e","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.170773302Z","level":"INFO","msg":"job started","job_id":"0ce981ce-407a-40ee-989e-ac1192ff61b2","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.170785505Z","level":"INFO","msg":"job started","job_id":"286457ef-9ad8-4f11-85ce-68c13af4ae16","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.235690074Z","level":"INFO","msg":"job handler finished","job_id":"46d9f0d1-ab9a-4fc2-9c5d-916bf89bb16b","trace_id":"8644d6d73d7c76214257ce385429b46e","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.235727423Z","level":"INFO","msg":"job handler finished","job_id":"327e8826-f065-4c97-b474-8f84b98cbdc5","trace_id":"8644d6d73d7c76214257ce385429b46e","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.243681471Z","level":"INFO","msg":"job started","job_id":"36c9a33c-e279-445c-bdd0-cd9533859cac","trace_id":"368e5b993ce53bed8204e262b6ccf733","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.243700243Z","level":"INFO","msg":"job started","job_id":"80fa21bc-189e-4349-920d-bc5e6b619761","trace_id":"368e5b993ce53bed8204e262b6ccf733","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.254326784Z","level":"INFO","msg":"job started","job_id":"34a53577-0376-4ccb-8b68-e6c1db76813a","trace_id":"368e5b993ce53bed8204e262b6ccf733","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.303588357Z","level":"INFO","msg":"job handler finished","job_id":"bf81abd1-df04-4a57-97ca-0602fb1906b6","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.303635787Z","level":"INFO","msg":"job handler finished","job_id":"aecdabe4-8053-447a-9e43-1c5caec93b6c","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.313383049Z","level":"INFO","msg":"job started","job_id":"9ebd5559-15fc-490d-9a57-6d10326e4254","trace_id":"368e5b993ce53bed8204e262b6ccf733","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.313446783Z","level":"INFO","msg":"job started","job_id":"5673dc78-785d-4725-a6bb-88da896ddb84","trace_id":"368e5b993ce53bed8204e262b6ccf733","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.315661611Z","level":"INFO","msg":"job handler finished","job_id":"65e6a11f-2b33-42a5-b99e-77f45e3aad09","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.31577892Z","level":"INFO","msg":"job handler finished","job_id":"391f2cf3-f1c7-4cb9-a794-e4b467d0956c","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.366421432Z","level":"INFO","msg":"job started","job_id":"7b6ae678-ac5a-4b11-9204-cab15e108353","trace_id":"7e17e9d033d536418482e43f671b8a12","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.366469444Z","level":"INFO","msg":"job started","job_id":"421eba3c-faee-4884-b3ce-e714af495835","trace_id":"7e17e9d033d536418482e43f671b8a12","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.371731155Z","level":"INFO","msg":"job handler finished","job_id":"0ce981ce-407a-40ee-989e-ac1192ff61b2","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.371765542Z","level":"INFO","msg":"job handler finished","job_id":"286457ef-9ad8-4f11-85ce-68c13af4ae16","trace_id":"09fb36f73a8990db9919588e4007b836","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a","duration_ms":200,"failed":false}
+{"time":"2026-10-27T06:48:03.382205268Z","level":"INFO","msg":"job started","job_id":"7c94048d-2758-4070-be64-f916069a4b76","trace_id":"7e17e9d033d536418482e43f671b8a12","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}
+{"time":"2026-10-27T06:48:03.382246958Z","level":"INFO","msg":"job started","job_id":"18810a56-11fa-43cc-b15a-3cccaf9c332b","trace_id":"7e17e9d033d536418482e43f671b8a12","task_type":"test.sleep","attempt":1,"worker_id":"3e59f840-e5e4-4c3b-9d50-5a194af1228a"}

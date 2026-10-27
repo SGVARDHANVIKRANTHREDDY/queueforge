@@ -128,7 +128,7 @@ KEY=$(admin create-api-key -tenant-id "$TID" -name k8s-drill | grep -Eo 'qf_live
 [[ -n "$TID" && -n "$KEY" ]] || fail "could not create tenant/key"
 JOB='{"task_type":"test.sleep","payload":{"ms":200}}'
 BODY='{"jobs":['; for i in $(seq 1 10); do BODY+="$JOB"; (( i < 10 )) && BODY+=','; done; BODY+=']}'
-kubectl -n "$NS" run qf-load --restart=Never --image=curlimages/curl:8.10.1 --env="KEY=$KEY" --env="BODY=$BODY" --env="API_HOST=queueforge-api" --command -- sh -c '
+kubectl -n "$NS" run qf-load --restart=Never --image=curlimages/curl:8.10.1 --env="KEY=$KEY" --env="BODY=$BODY" --env="API_HOST=queueforge-api" --overrides='{"spec":{"nodeSelector":{"role":"db"}}}' --command -- sh -c '
 i=0
 while [ ! -f /tmp/stop ]; do
   i=$((i+1)); tries=0

@@ -2107,3 +2107,58 @@ The disposable cluster was deleted successfully. **Kubernetes validation
 verdict: FAIL / not production-ready evidence.** The blockers are preserved
 verbatim in the evidence file; this run must not be reported as a Kubernetes
 pass.
+## Corrected kind and dense upgrade drills (2026-10-27)
+
+The supplied Kubernetes fixes were installed in
+[deploy/k8s/queueforge.yaml](../deploy/k8s/queueforge.yaml), and the supplied
+drills were installed at
+[scripts/drills/kind-drill.sh](../scripts/drills/kind-drill.sh) and
+[scripts/drills/upgrade-rollback-drill.sh](../scripts/drills/upgrade-rollback-drill.sh).
+Both shell scripts passed `bash -n` and retain LF endings.
+
+### Three-node kind drill
+
+The corrected drill ran on commit `cc3516f` in a disposable three-node
+`kind` cluster. The complete raw output is in
+[kind-drill-20261027T064831Z.txt](./kind-drill-20261027T064831Z.txt).
+
+Results:
+
+```text
+KIND_DRILL_RESULT cluster_ready_seconds=42.0 nodes=3
+KIND_DRILL_RESULT rollout_to_ready_seconds=6.3 api_ready=2 worker_ready=2
+KIND_DRILL_RESULT api_pod_kill_recovery_seconds=7.1
+KIND_DRILL_RESULT worker_hard_kill_recovery_seconds=7.1
+KIND_DRILL_RESULT node_drain_seconds=2.3
+KIND_DRILL_RESULT batches_sent=486 jobs_expected=4860 batches_that_needed_retries=1
+KIND_DRILL_RESULT jobs_in_db=4860 succeeded=4860 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 not_exactly_one_success=0 jobs_rerun_after_disruptions=0
+KIND_DRILL_RESULT verdict=PASS
+```
+
+The drill verified startup under the numeric `runAsUser: 10001` security
+context, startup probes, the allow-list network policies, Service traffic,
+API pod replacement, hard worker termination, and a PDB-protected drain of
+`qf-drill-worker2`. PostgreSQL and the load pod were kept on the other worker
+so the drain could complete.
+
+### Dense upgrade, rollback, and failed-migration drill
+
+The replacement drill ran on commit `cc3516f` with
+`PHASE_SECONDS=12 LOAD_SLEEP=0.1`. The complete raw output is in
+[upgrade-drill-20261027T070250Z.txt](./upgrade-drill-20261027T070250Z.txt).
+
+Results:
+
+```text
+UPGRADE_DRILL_RESULT migrate_new_seconds=0.9 schema_version_before=6 schema_version_after=7
+UPGRADE_DRILL_RESULT api_downtime_upgrade_seconds=1.9
+UPGRADE_DRILL_RESULT api_downtime_rollback_seconds=2.1 schema_version_during_rollback=7
+UPGRADE_DRILL_RESULT failed_migration_exit_code=1 schema_version_after=7 partial_column_left_behind=0
+UPGRADE_DRILL_RESULT batches_sent=526 jobs_expected=5260 batches_that_needed_retries=1
+UPGRADE_DRILL_RESULT jobs_in_db=5260 succeeded=5260 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 not_exactly_one_success=0
+UPGRADE_DRILL_RESULT verdict=PASS
+```
+
+The denser client traffic exercised the idempotent retry path at least once
+while preserving exact job counts, exactly-one success, no dead jobs, and no
+leaked execution state.

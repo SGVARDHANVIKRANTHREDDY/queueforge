@@ -86,7 +86,7 @@ QueueForge eliminates these failure modes by using **PostgreSQL as the single, a
 
 ### 2.11 Official Python Client SDK & Real-World Integration
 - **Zero-Dependency Python SDK:** Pure Python `QueueForgeClient` using `urllib.request` with typed exceptions (`AuthenticationError`, `IdempotencyConflictError`, `RateLimitError`, `QuotaExceededError`).
-- **Campus Placement Alert Bot:** Production dogfooding application [`examples/placement-alert-bot/bot.py`](file:///c:/Users/sgvar/OneDrive/Desktop/DO%20NOT%20OPEN/Backend%20Project/examples/placement-alert-bot/bot.py) orchestrating high-priority placement alerts, idempotent retry deduplication, daily cron digests, and queue statistics queries.
+- **Campus Placement Alert Bot:** Production dogfooding application [`examples/placement-alert-bot/bot.py`](examples/placement-alert-bot/bot.py) orchestrating high-priority placement alerts, idempotent retry deduplication, daily cron digests, and queue statistics queries.
 
 ---
 

@@ -64,7 +64,7 @@ Claim query latency, median of 7:
 ## 4. Correctness verification
 
 - **Model-based property test** (`tests/property`): 25 seeds x 200 random operations (enqueue, claim batch, complete, fail, cancel, renew, lease expiry + recovery, stale completions). After **every** step the database is compared with an independent in-memory model and these invariants are checked: job status and attempt counts match; `outstanding_jobs` equals queued+running jobs per tenant; busy execution slots equal running jobs and never exceed the limit; every busy slot points at a running job holding that lease; unfinished attempts equal running jobs. A failing seed prints a replay command.
-- **Coverage:** 66.4% of statements across `internal/` and the SDK, reproduced on 2026-10-28 with the corrected `-coverpkg` command. The exact command, complete `go test` output, `c.out`, and full `go tool cover -func` listing are preserved in `evidence/coverage-command-20261028-cross-package.txt`, `evidence/coverage-command-20261028-cross-package-output.txt`, `evidence/c.out`, and `evidence/coverage-func-20261028-cross-package.txt`. The lowest files (retention/recovery/scheduler loop wrappers, worker runtime) are exercised by the real-process chaos tests, which coverage cannot attribute the same way; the claim, recovery, completion, auth, audit and retention logic they call is covered directly.
+- **Coverage:** 66.4% of statements across `internal/` and the SDK, reproduced on 2026-10-28 with the corrected `-coverpkg` command. The command and full `go tool cover -func` output were reviewed during verification; raw evidence is intentionally kept outside the public release tree. The lowest files (retention/recovery/scheduler loop wrappers, worker runtime) are exercised by the real-process chaos tests, which coverage cannot attribute the same way; the claim, recovery, completion, auth, audit and retention logic they call is covered directly.
 - **Mutation checking**: 9 of the 12 original table rows were reproduced on 2026-10-25 (M1, M3, M6-M13 plus the failure-path variants), plus three extra mutations beyond the table (M2, M4, M5). The three rows not reproduced are two jobs sharing a slot, the naive SDK retry, and the metrics mislabelling.
 
 | Injected bug | Caught by |
@@ -153,8 +153,9 @@ by default for this environment.
 
 Idle latency: 150 samples, p50 14.9 ms, p95 21.9 ms, p99 24.2 ms.
 
-The raw outputs are in `evidence/rerun-20261022-1409/bench-baseline.txt`,
-`bench-batch.txt`, and `bench-idle.txt`.
+The raw outputs were captured during local verification and are intentionally excluded from
+the public release tree; the benchmark commands and environment above are the reproducible
+record.
 
 The same soak run completed with `enqueued=271084`, `enqueue_errors=0`,
 `succeeded=270541`, `dead=543`, `open=0`, `leaked_slots=0`, and

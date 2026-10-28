@@ -38,6 +38,7 @@ docker compose -f deploy/docker-compose.yml exec api /app/admin create-tenant -n
 docker compose -f deploy/docker-compose.yml exec api /app/admin create-api-key -tenant-id <TENANT_UUID> -name demo-key
 
 # 3. Enqueue a job (the sample worker has an "echo" task)
+export API_KEY='qf_live_...'
 curl -s -X POST localhost:8080/v1/jobs -H "Authorization: Bearer qf_live_..." \
   -H "Idempotency-Key: demo-1" -H "Content-Type: application/json" \
   -d '{"task_type":"echo","payload":{"hello":"world"}}'
@@ -77,9 +78,6 @@ func main() {
 ```
 Configuration is via `QF_*` environment variables (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)). A handler
 that panics is recovered and retried like any other failure.
-
-> The Go module path is currently `queueforge`, which `go get` cannot fetch. Run
-> `./scripts/set-module-path.sh github.com/YOUR_USER/queueforge` once after you host the repository.
 
 ## Enqueue from your application
 

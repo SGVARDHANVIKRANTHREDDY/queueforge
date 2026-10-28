@@ -40,7 +40,7 @@ Exactly-once *execution* (impossible without cooperating handlers), sandboxing u
 | River (Postgres) | The closest alternative and **faster when tuned** (~1.8x drain). It lacks the tenant quotas/slots, idempotency-key semantics and audit trail built here. If you do not need those, use River |
 
 ## 6. Results
-Drain 16 to ~830 jobs/s; idle pickup 222 to ~9 ms; claim latency flat from 0 to 400k unrelated queued jobs; `kill -9` recovery in 3.1 s; Postgres outage survived with zero loss; 5,000 randomized operations verified against a model; 12 injected bugs were caught in author-run mutation checks, not independently reproduced. Full tables in the benchmark report.
+Drain 16 to ~830 jobs/s; idle pickup 222 to ~9 ms; claim latency flat from 0 to 400k unrelated queued jobs; `kill -9` recovery in 3.1 s; Postgres outage survived with zero loss; 5,000 randomized operations verified against a model; 9 of the 12 original mutation-table rows were reproduced on 2026-10-25, plus three extra mutations beyond that table. Full tables in the benchmark report.
 
 ## 7. Risks and mitigations
 | Risk | Mitigation | Residual |
@@ -59,5 +59,5 @@ Drain 16 to ~830 jobs/s; idle pickup 222 to ~9 ms; claim latency flat from 0 to 
 
 ## 9. FAQ
 **Why not exactly-once?** Because a handler's side effect and its commit cannot be made atomic. What *is* guaranteed: a job completes at most once in the database (fencing) and runs at least once.
-**What happens if the database restarts mid-job?** Workers retry the commit with backoff while the lease renewer runs; if the outage outlasts the lease, the job is recovered and retried. This is at-least-once execution: a partition longer than the lease can duplicate work, bounded in the network-fault test by the tenant's maximum concurrency plus a small margin (16 + 4 = 20). The earlier 3-7 wasted-execution result was a best case; 11 runs ranged from 3 to 16.
+**What happens if the database restarts mid-job?** Workers retry the commit with backoff while the lease renewer runs; if the outage outlasts the lease, the job is recovered and retried. This is at-least-once execution: a partition longer than the lease can duplicate work, bounded in the network-fault test by the tenant's maximum concurrency plus a small margin (16 + 4 = 20). The earlier 3-7 wasted-execution result was a best case; 17 observations ranged from 3 to 16.
 **What would you do with two more weeks?** Deploy it with real users first (nothing teaches more), then measure batch completion on representative workloads, then a separate-hardware scaling curve.

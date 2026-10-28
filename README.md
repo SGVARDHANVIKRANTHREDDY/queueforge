@@ -39,12 +39,12 @@ docker compose -f deploy/docker-compose.yml exec api /app/admin create-api-key -
 
 # 3. Enqueue a job (the sample worker has an "echo" task)
 export API_KEY='qf_live_...'
-curl -s -X POST localhost:8080/v1/jobs -H "Authorization: Bearer qf_live_..." \
+curl -s -X POST localhost:8080/v1/jobs -H "Authorization: Bearer $API_KEY" \
   -H "Idempotency-Key: demo-1" -H "Content-Type: application/json" \
   -d '{"task_type":"echo","payload":{"hello":"world"}}'
 
 # 4. Watch it finish
-curl -s localhost:8080/v1/jobs/<JOB_ID> -H "Authorization: Bearer qf_live_..."
+curl -s localhost:8080/v1/jobs/<JOB_ID> -H "Authorization: Bearer $API_KEY"
 ```
 Dashboard: <http://localhost:8080/ui/> (paste your key).
 

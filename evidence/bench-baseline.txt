@@ -1,1 +1,0 @@
-Windows PowerShell execution: see command output in session; no BENCH_RESULT was produced if tests failed.

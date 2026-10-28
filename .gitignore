@@ -35,3 +35,25 @@ __pycache__/
 dist/
 build/
 .pytest_cache/
+
+# Local verification evidence and disposable drill snapshots
+evidence/
+promtests/
+qf-drills/
+qf-drills-v2/
+qf-k8s-fix/
+qf-mutation-batch2/
+qf-promtool-tests/
+qf-upgrade-drill/
+
+# Archives, scratch outputs, and generated binaries
+*.zip
+/c
+bench/headtohead/h2h
+
+# Private planning and imported source documents
+PLACEMENT.md
+QueueForge_*.docx
+QueueForge_*.md
+/QueueForge *.md
+/QueueForge *.docx

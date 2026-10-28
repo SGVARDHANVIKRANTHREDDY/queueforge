@@ -1,7 +1,0 @@
-== mass-crash drill: workers=4 jobs=3000 lease=30s tenant=2d0e961c-fe4f-4a11-96b4-ef2ca05af669 ==
-MASS_CRASH_RESULT enqueue_seconds=6.4
-MASS_CRASH_RESULT running_at_kill=64
-all workers SIGKILLed at 07:18:03
-MASS_CRASH_RESULT first_recovery_seconds=52.2 all_recovered_seconds=52.2 lease_seconds=30
-MASS_CRASH_RESULT all_done_seconds=656.5 jobs_rerun=64 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 not_exactly_one_success=0
-MASS_CRASH_RESULT verdict=PASS

@@ -2,9 +2,10 @@
 
 All notable changes. QueueForge is pre-1.0: interfaces may change between minor versions.
 
-## Unreleased
-> Everything below was written without a Go toolchain or database and has NOT been compiled or run
-> by its author. Run `go build ./... && go vet ./... && go test -race ./...` before relying on it.
+## v0.1.1
+> Pre-1.0 release. Interfaces may change between minor versions. Validation covers the documented
+> Go, PostgreSQL, Docker, Kubernetes, chaos, and deployment checks; no extended public production
+> deployment is claimed.
 
 ### Added
 - `outbox` package: public transactional enqueue (`EnqueueTx`) inside your own PostgreSQL transaction.
@@ -24,3 +25,7 @@ All notable changes. QueueForge is pre-1.0: interfaces may change between minor 
 
 ### Removed
 - `QF_DATABASE_TLS_MODE`: it was read but never used. TLS is controlled by `sslmode` in `QF_DATABASE_URL`.
+
+## Unreleased
+
+Future changes will be recorded here.

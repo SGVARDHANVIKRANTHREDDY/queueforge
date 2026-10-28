@@ -64,8 +64,8 @@ Claim query latency, median of 7:
 ## 4. Correctness verification
 
 - **Model-based property test** (`tests/property`): 25 seeds x 200 random operations (enqueue, claim batch, complete, fail, cancel, renew, lease expiry + recovery, stale completions). After **every** step the database is compared with an independent in-memory model and these invariants are checked: job status and attempt counts match; `outstanding_jobs` equals queued+running jobs per tenant; busy execution slots equal running jobs and never exceed the limit; every busy slot points at a running job holding that lease; unfinished attempts equal running jobs. A failing seed prints a replay command.
-- **Coverage:** 66.4% of statements across `internal/` and the SDK, documented by the author but not reproduced with the corrected `-coverpkg` command. The lowest files (retention/recovery/scheduler loop wrappers, worker runtime) are exercised by the real-process chaos tests, which `go test -cover` cannot attribute; the claim, recovery, completion, auth, audit and retention logic they call is covered directly.
-- **Mutation checking**: 12 injected bugs were caught in author-run checks; this was not independently reproduced. This found two blind spots in my own tests (a stale-lease generator that rarely hit the dangerous case; a double-claim race a sequential test cannot reach), both fixed.
+- **Coverage:** 66.4% of statements across `internal/` and the SDK, reproduced on 2026-10-28 with the corrected `-coverpkg` command. The exact command, complete `go test` output, `c.out`, and full `go tool cover -func` listing are preserved in `evidence/coverage-command-20261028-cross-package.txt`, `evidence/coverage-command-20261028-cross-package-output.txt`, `evidence/c.out`, and `evidence/coverage-func-20261028-cross-package.txt`. The lowest files (retention/recovery/scheduler loop wrappers, worker runtime) are exercised by the real-process chaos tests, which coverage cannot attribute the same way; the claim, recovery, completion, auth, audit and retention logic they call is covered directly.
+- **Mutation checking**: 9 of the 12 original table rows were reproduced on 2026-10-25 (M1, M3, M6-M13 plus the failure-path variants), plus three extra mutations beyond the table (M2, M4, M5). The three rows not reproduced are two jobs sharing a slot, the naive SDK retry, and the metrics mislabelling.
 
 | Injected bug | Caught by |
 |---|---|
@@ -89,7 +89,7 @@ Claim query latency, median of 7:
 | Worker `kill -9` mid-job | `TestChaos_RealKill9_WorkerProcessRecovery` (real binary, separate process) | recovered **3.1 s** after the kill (lease 3 s); exactly 2 attempts on different workers; 0 leaks |
 | Kubernetes worker container stopped at the runtime | `scripts/drills/kind-drill.sh` on a disposable 3-node kind cluster | `crictl stop --timeout 0`; 2 jobs re-ran after lease recovery; 5,590/5,590 jobs succeeded exactly once; 0 dead and 0 leaks |
 | Postgres stopped ~10 s mid-workload | `TestChaos_PostgresOutageMidWorkload` (opt-in) | ten runs across two evidence batches, each with short and long outage scenarios; short-outage reruns ranged from 0 to 16, long-outage reruns were 16 every time. Short outages are not always absorbed without re-execution. All runs had 0 dead, 0 leaks, 0 outstanding, 0 unfinished attempts, 0 double successes, and exactly one success per job |
-| Network faults via fault-injecting proxy: +250 ms latency, 4 connection resets, 8 s black hole (longer than the lease) | `TestChaos_NetworkFaults...` | all 240 jobs succeed; 0 dead, 0 leaks. **Wasted executions ranged from 3 to 16 across 11 runs** (the earlier 3-7 result was a best case). The hard bound is tenant concurrency 16 plus a margin of 4, reflecting at-least-once duplicate work during a partition longer than the lease. |
+| Network faults via fault-injecting proxy: +250 ms latency, 4 connection resets, 8 s black hole (longer than the lease) | `TestChaos_NetworkFaults...` | all 240 jobs succeed; 0 dead, 0 leaks. **Wasted executions ranged from 3 to 16 across 17 observations** (the earlier 3-7 result was a best case). The hard bound is tenant concurrency 16 plus a margin of 4, reflecting at-least-once duplicate work during a partition longer than the lease. |
 | Poison row in lease recovery / retention | regression tests | healthy rows still processed; failure reported |
 | Stale worker completes after losing its lease | property + chaos | rejected (`ErrLeaseLost`) |
 
@@ -111,7 +111,7 @@ Zero errors logged; queue depth never above 3; dead tuples followed a healthy au
 - A handler that ignores cancellation keeps running after its lease is lost; its result is fenced off but its side effects are not undone.
 - Claim work per call is bounded by the candidate pool plus saturated tenants' pending quotas (ADR-015).
 - Single PostgreSQL primary: no failover tested (recovery = restore from backup).
-- **Not measured:** multi-core scaling, separate database host, network latency between nodes, runs longer than 7 minutes, load above ~1,000 jobs/s, multi-node workers.
+- **Not measured:** multi-core scaling, separate database host, network latency between nodes, runs longer than 30 minutes, load above ~1,000 jobs/s, multi-node workers.
 
 ## Batch completion (measured)
 `QF_BATCH_COMPLETION=true` groups successful completions into one statement. To measure it, run the

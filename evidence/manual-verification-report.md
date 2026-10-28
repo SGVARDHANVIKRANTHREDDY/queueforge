@@ -1893,6 +1893,19 @@ Linux disposable environment. `go tool cover -func=c.out` reported:
 
     total: (statements) 66.4%
 
+Reproduction was completed on 2026-10-28 with:
+
+    go test -coverpkg=./internal/...,./sdk/... -coverprofile=c.out ./...
+    go tool cover -func=c.out
+
+The exact command, complete test output, profile, and complete function listing
+are preserved in:
+
+    coverage-command-20261028-cross-package.txt
+    coverage-command-20261028-cross-package-output.txt
+    c.out
+    coverage-func-20261028-cross-package.txt
+
 The earlier Windows coverage attempt failed because it was run outside the
 Docker network and could not resolve `qf-race-pg` / connect to the local
 PostgreSQL port; that failure is environmental, not a test assertion.
@@ -2065,6 +2078,22 @@ The upgrade/rollback drill was intentionally skipped per request.
 
 The canonical hosted CI run for commit `5516d6a` is `40173597933`; the raw
 run list above is retained as the source of truth.
+
+The latest hosted history was checked on 2026-10-28. GitHub CLI was not
+installed, so the equivalent GitHub Actions API response and a readable
+five-run projection are preserved in
+[gh-run-list-20261028.json](./gh-run-list-20261028.json) and
+[gh-run-list-20261028.txt](./gh-run-list-20261028.txt):
+
+    fa418f7  40510151471  completed success
+    cda254f  40509145634  completed success
+    3832475  40470472595  completed failure
+    3832475  40464973515  completed success
+    cc3516f  40463295445  completed success
+
+The newest commits `cda254f` and `fa418f7` therefore both have successful
+hosted runs. The duplicate `3832475` entries show one failed and one successful
+run for that commit; both raw results are retained.
 ## kind Kubernetes validation (2026-10-26)
 
 The Kubernetes validation was run in a disposable `kind` cluster named
@@ -2147,14 +2176,15 @@ Results:
 KIND_DRILL_RESULT cluster_ready_seconds=42.0 nodes=3
 KIND_DRILL_RESULT rollout_to_ready_seconds=6.3 api_ready=2 worker_ready=2
 KIND_DRILL_RESULT api_pod_kill_recovery_seconds=7.1
-KIND_DRILL_RESULT worker_container_kill_recovery_seconds=7.1
+KIND_DRILL_RESULT worker_hard_kill_recovery_seconds=7.1
 KIND_DRILL_RESULT node_drain_seconds=2.3
 KIND_DRILL_RESULT batches_sent=486 jobs_expected=4860 batches_that_needed_retries=1
 KIND_DRILL_RESULT jobs_in_db=4860 succeeded=4860 dead=0 busy_slots=0 unfinished_attempts=0 outstanding=0 not_exactly_one_success=0 jobs_rerun_after_disruptions=0
 KIND_DRILL_RESULT verdict=PASS
 ```
 
-The earlier result above used forced pod deletion, not a runtime-level kill.
+The earlier result above used forced pod deletion, not a runtime-level kill;
+the key is quoted exactly as it appeared in that raw output.
 The updated drill uses `crictl stop --timeout 0` inside the kind node to stop
 the worker container without Kubernetes graceful termination. It requires the
 worker lease to expire and be recovered, and the final integrity check now

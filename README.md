@@ -6,9 +6,10 @@ workers.
 
 > **Status: pre-1.0, experimental.** The core design (leases with fencing, `FOR UPDATE SKIP LOCKED`
 > claiming, crash recovery) has an extensive test suite in the repository, but the maintainers'
-> latest changes have **not been built or tested yet**: see [CHANGELOG.md](CHANGELOG.md) and
-> [docs/PRODUCTION_READINESS_AUDIT.md](docs/PRODUCTION_READINESS_AUDIT.md) if present. Do not run
-> business-critical workloads on it. Delivery is **at-least-once**: handlers must be idempotent.
+> latest changes have been exercised with Docker deployment checks, PostgreSQL integration tests,
+> chaos tests, and Kubernetes drills. It has not been validated as a multi-node production service
+> or through an extended public deployment. Do not run business-critical workloads on it. Delivery
+> is **at-least-once**: handlers must be idempotent.
 
 ## Should you use it?
 
@@ -125,7 +126,7 @@ return tx.Commit(ctx)
 ## Operating it
 
 Metrics, alerts and runbooks: `deploy/alerts.yml`, `docs/runbooks/`. Production on one VPS:
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Kubernetes (unverified): `deploy/k8s/`. Threat model:
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Kubernetes deployment: `deploy/k8s/`. Threat model:
 [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md). Design decisions: `docs/ADRs/` (ADR-001 to ADR-016).
 
 ## Run the tests
@@ -144,4 +145,4 @@ enqueue; `sdk/{go,python}` clients; `internal/` implementation; `migrations/` SQ
 
 ## License
 
-Add a LICENSE file before publishing; none was present when this README was written.
+QueueForge is released under the [MIT License](LICENSE).

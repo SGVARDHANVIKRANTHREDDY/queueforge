@@ -45,6 +45,7 @@ qf-k8s-fix/
 qf-mutation-batch2/
 qf-promtool-tests/
 qf-upgrade-drill/
+docs/
 
 # Archives, scratch outputs, and generated binaries
 *.zip

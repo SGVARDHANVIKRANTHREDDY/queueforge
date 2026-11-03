@@ -383,12 +383,23 @@ func TestStage3_SchedulesQuotasAndDelayedJobs(t *testing.T) {
 	}
 
 	// 3. Test rate limiting: token bucket depletion
-	// Deplete rate bucket to 0 tokens
-	_, _ = db.Pool.Exec(context.Background(), `
+	// Use a very low refill rate so the depleted state cannot refill while the assertion runs.
+	_, err = db.Pool.Exec(context.Background(), `
 		UPDATE tenant_rate_buckets
 		SET tokens = 0.2, last_refill_at = clock_timestamp()
 		WHERE tenant_id = $1
 	`, tenant.ID)
+	if err != nil {
+		t.Fatalf("failed to deplete rate bucket: %v", err)
+	}
+	_, err = db.Pool.Exec(context.Background(), `
+		UPDATE tenant_limits
+		SET enqueue_rate_per_second = 0.001
+		WHERE tenant_id = $1
+	`, tenant.ID)
+	if err != nil {
+		t.Fatalf("failed to slow rate bucket refill: %v", err)
+	}
 
 	_, errRate := jobRepo.EnqueueJob(context.Background(), postgres.EnqueueParams{
 		TenantID:        tenant.ID,

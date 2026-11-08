@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/worker ./cmd/work
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/admin ./cmd/admin
 
 # Final Runtime Stage
-FROM alpine:3.20
+FROM alpine:3.23
 
 WORKDIR /app
 
